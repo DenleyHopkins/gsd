@@ -1,0 +1,1344 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#7EBA28">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<title>GSD — Get Stuff Done</title>
+<style>
+:root{
+  --green:#7EBA28; --green-d:#6aa01f; --green-l:#8fce30;
+  --grey:#383839;
+  --bg:#f4f5f2; --surface:#ffffff; --surface-2:#f9faf6;
+  --text:#26271f; --text-2:#6c6e64; --text-3:#9a9c90;
+  --line:#e7e9e0; --line-2:#eef0e8;
+  --hi:#e5484d; --hi-bg:#fdeceb;
+  --mid:#f5a623; --mid-bg:#fdf3e2;
+  --lo:#8a8d80; --lo-bg:#f0f1ea;
+  --shadow:0 1px 2px rgba(40,42,30,.06), 0 6px 18px rgba(40,42,30,.06);
+  --shadow-lg:0 8px 40px rgba(40,42,30,.16);
+  --radius:18px; --radius-sm:12px;
+  --nav-h:64px; --safe-b:env(safe-area-inset-bottom,0px);
+  --ff:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,"Helvetica Neue",Helvetica,Arial,sans-serif;
+}
+[data-theme="dark"]{
+  --bg:#1a1b17; --surface:#242520; --surface-2:#2b2c26;
+  --text:#eef0e6; --text-2:#a9ab9e; --text-3:#7b7d71;
+  --line:#33352c; --line-2:#2e302a;
+  --hi:#ff6369; --hi-bg:#3a2321;
+  --mid:#ffb84d; --mid-bg:#3a2f1c;
+  --lo:#8a8d80; --lo-bg:#2e302a;
+  --shadow:0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,0,0,.35);
+  --shadow-lg:0 8px 40px rgba(0,0,0,.5);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;height:100%}
+body{
+  font-family:var(--ff); background:var(--bg); color:var(--text);
+  font-size:16px; line-height:1.45; overscroll-behavior-y:none;
+  -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,select,textarea{font-family:inherit;font-size:16px;color:var(--text)}
+::-webkit-scrollbar{width:0;height:0}
+.app{max-width:520px;margin:0 auto;min-height:100%;position:relative;
+  padding-bottom:calc(var(--nav-h) + var(--safe-b) + 8px);
+  padding-top:env(safe-area-inset-top,0px);}
+
+/* ---------- Header ---------- */
+.hdr{position:sticky;top:0;z-index:40;background:var(--bg);
+  padding:14px 18px 8px;padding-top:calc(14px + env(safe-area-inset-top,0px));}
+.hdr-top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.hdr-title{font-size:26px;font-weight:800;letter-spacing:-.02em;margin:0}
+.hdr-sub{color:var(--text-2);font-size:13px;margin-top:1px;font-weight:500}
+.hdr-actions{display:flex;gap:8px;align-items:center}
+.icon-btn{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;
+  background:var(--surface);box-shadow:var(--shadow);color:var(--text-2);transition:.15s}
+.icon-btn:active{transform:scale(.92)}
+.icon-btn svg{width:20px;height:20px}
+.avatar{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;
+  background:var(--green);color:#fff;font-weight:700;font-size:15px;box-shadow:var(--shadow)}
+
+/* ---------- Search + filter ---------- */
+.searchbar{display:flex;gap:10px;margin:10px 18px 4px;align-items:center}
+.search{flex:1;display:flex;align-items:center;gap:8px;background:var(--surface);
+  border-radius:14px;padding:10px 14px;box-shadow:var(--shadow)}
+.search svg{width:18px;height:18px;color:var(--text-3);flex-shrink:0}
+.search input{border:none;background:none;outline:none;width:100%;font-size:15px}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:10px 18px 6px;scrollbar-width:none}
+.chip{white-space:nowrap;padding:7px 14px;border-radius:20px;font-size:13px;font-weight:600;
+  background:var(--surface);color:var(--text-2);box-shadow:var(--shadow);transition:.15s}
+.chip.active{background:var(--grey);color:#fff}
+[data-theme="dark"] .chip.active{background:var(--green);color:#0d1206}
+
+/* ---------- Views / content ---------- */
+.view{padding:6px 18px 20px;animation:fade .25s ease}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.section-h{display:flex;align-items:baseline;justify-content:space-between;margin:20px 2px 10px}
+.section-h h2{font-size:15px;font-weight:700;margin:0;letter-spacing:-.01em}
+.section-h .count{color:var(--text-3);font-size:13px;font-weight:600}
+
+/* ---------- Task card ---------- */
+.task{background:var(--surface);border-radius:var(--radius);padding:14px 14px 14px 12px;
+  box-shadow:var(--shadow);display:flex;gap:12px;margin-bottom:10px;position:relative;
+  transition:.15s;align-items:flex-start}
+.task:active{transform:scale(.985)}
+.task.done{opacity:.55}
+.check{width:24px;height:24px;border-radius:50%;border:2px solid var(--line);flex-shrink:0;
+  margin-top:1px;display:grid;place-items:center;transition:.18s;background:var(--surface)}
+.check:active{transform:scale(.85)}
+.task.done .check{background:var(--green);border-color:var(--green)}
+.check svg{width:14px;height:14px;color:#fff;opacity:0;transition:.15s}
+.task.done .check svg{opacity:1}
+.task-body{flex:1;min-width:0}
+.task-title{font-size:15.5px;font-weight:600;letter-spacing:-.01em;word-break:break-word}
+.task.done .task-title{text-decoration:line-through;color:var(--text-2)}
+.task-meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;align-items:center}
+.pill{font-size:11.5px;font-weight:700;padding:3px 8px;border-radius:8px;display:inline-flex;
+  align-items:center;gap:4px;letter-spacing:.01em}
+.pill svg{width:11px;height:11px}
+.pill.ctx{background:var(--surface-2);color:var(--text-2);border:1px solid var(--line)}
+.pill.hi{background:var(--hi-bg);color:var(--hi)}
+.pill.mid{background:var(--mid-bg);color:var(--mid)}
+.pill.lo{background:var(--lo-bg);color:var(--lo)}
+.pill.due{background:var(--surface-2);color:var(--text-2);border:1px solid var(--line)}
+.pill.due.over{background:var(--hi-bg);color:var(--hi);border:none}
+.pill.recur{background:var(--surface-2);color:var(--text-2);border:1px solid var(--line)}
+.mini-av{width:22px;height:22px;border-radius:50%;background:var(--grey);color:#fff;font-size:10px;
+  font-weight:700;display:grid;place-items:center;flex-shrink:0}
+.dot{width:5px;height:5px;border-radius:50%;background:var(--green);position:absolute;top:14px;right:14px}
+
+/* ---------- Empty ---------- */
+.empty{text-align:center;padding:60px 30px;color:var(--text-3)}
+.empty svg{width:52px;height:52px;margin-bottom:14px;color:var(--line);stroke-width:1.5}
+.empty h3{color:var(--text-2);font-size:16px;margin:0 0 4px}
+.empty p{font-size:14px;margin:0;max-width:240px;margin-inline:auto}
+
+/* ---------- Bottom nav ---------- */
+.nav{position:fixed;left:0;right:0;bottom:0;z-index:50;max-width:520px;margin:0 auto;
+  height:calc(var(--nav-h) + var(--safe-b));padding-bottom:var(--safe-b);
+  background:var(--surface);border-top:1px solid var(--line);
+  display:flex;align-items:stretch;box-shadow:0 -2px 20px rgba(40,42,30,.05)}
+[data-theme="dark"] .nav{box-shadow:0 -2px 20px rgba(0,0,0,.3)}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:3px;color:var(--text-3);font-size:10.5px;font-weight:600;position:relative;transition:.15s}
+.nav-item svg{width:23px;height:23px;stroke-width:2}
+.nav-item.active{color:var(--green)}
+.nav-item .badge{position:absolute;top:6px;left:50%;margin-left:6px;background:var(--hi);color:#fff;
+  font-size:9px;font-weight:800;min-width:16px;height:16px;border-radius:8px;display:grid;
+  place-items:center;padding:0 4px}
+/* FAB slot in center of nav */
+.nav-fab-slot{width:70px;flex:0 0 70px;position:relative}
+.fab{position:fixed;bottom:calc(var(--nav-h) + var(--safe-b) - 26px);left:50%;transform:translateX(-50%);
+  z-index:60;width:60px;height:60px;border-radius:50%;background:var(--green);color:#fff;
+  display:grid;place-items:center;box-shadow:0 6px 20px rgba(126,186,40,.5);transition:.15s}
+.fab:active{transform:translateX(-50%) scale(.9)}
+.fab svg{width:28px;height:28px}
+@media(min-width:520px){.fab{left:calc(50% )}}
+
+/* ---------- Sheets / modals ---------- */
+.scrim{position:fixed;inset:0;background:rgba(20,22,14,.5);z-index:100;opacity:0;
+  pointer-events:none;transition:.25s;backdrop-filter:blur(2px)}
+.scrim.show{opacity:1;pointer-events:auto}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:101;max-width:520px;margin:0 auto;
+  background:var(--surface);border-radius:24px 24px 0 0;transform:translateY(110%);
+  transition:transform .32s cubic-bezier(.32,.72,0,1);max-height:94vh;display:flex;flex-direction:column;
+  box-shadow:var(--shadow-lg)}
+.sheet.show{transform:translateY(0)}
+.sheet-grab{width:38px;height:4px;border-radius:2px;background:var(--line);margin:10px auto 4px;flex-shrink:0}
+.sheet-hd{display:flex;align-items:center;justify-content:space-between;padding:6px 18px 12px;flex-shrink:0}
+.sheet-hd h2{font-size:19px;font-weight:800;margin:0;letter-spacing:-.02em}
+.sheet-body{overflow-y:auto;padding:0 18px calc(20px + var(--safe-b));-webkit-overflow-scrolling:touch}
+.sheet-close{width:32px;height:32px;border-radius:50%;background:var(--surface-2);display:grid;
+  place-items:center;color:var(--text-2)}
+.sheet-close svg{width:18px;height:18px}
+
+/* ---------- Form ---------- */
+.field{margin-bottom:16px}
+.field label{display:block;font-size:12.5px;font-weight:700;color:var(--text-2);margin-bottom:7px;
+  text-transform:uppercase;letter-spacing:.04em}
+.field input[type=text],.field input[type=date],.field textarea,.field select{
+  width:100%;padding:13px 14px;border-radius:var(--radius-sm);border:1.5px solid var(--line);
+  background:var(--surface-2);outline:none;transition:.15s}
+.field input:focus,.field textarea:focus,.field select:focus{border-color:var(--green);background:var(--surface)}
+.field textarea{resize:vertical;min-height:70px;line-height:1.5}
+.field select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236c6e64' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 14px center;padding-right:40px}
+.seg{display:flex;gap:8px}
+.seg button{flex:1;padding:12px 8px;border-radius:var(--radius-sm);border:1.5px solid var(--line);
+  background:var(--surface-2);font-weight:700;font-size:13.5px;color:var(--text-2);transition:.15s}
+.seg button.sel[data-p=High]{background:var(--hi-bg);color:var(--hi);border-color:var(--hi)}
+.seg button.sel[data-p=Normal]{background:var(--mid-bg);color:var(--mid);border-color:var(--mid)}
+.seg button.sel[data-p=Low]{background:var(--lo-bg);color:var(--lo);border-color:var(--lo)}
+.btn{width:100%;padding:15px;border-radius:14px;background:var(--green);color:#fff;font-weight:800;
+  font-size:16px;transition:.15s;letter-spacing:-.01em}
+.btn:active{transform:scale(.98)}
+.btn.ghost{background:var(--surface-2);color:var(--text)}
+.btn.danger{background:var(--hi-bg);color:var(--hi)}
+.btn.row{display:flex;align-items:center;justify-content:center;gap:8px}
+.btn svg{width:18px;height:18px}
+.btn-2{display:flex;gap:10px}
+
+/* ---------- Task detail ---------- */
+.detail-title{font-size:22px;font-weight:800;letter-spacing:-.02em;margin:2px 0 12px;line-height:1.25}
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.dcell{background:var(--surface-2);border-radius:var(--radius-sm);padding:11px 13px}
+.dcell .k{font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.04em}
+.dcell .v{font-size:14.5px;font-weight:600;margin-top:3px;display:flex;align-items:center;gap:6px}
+.notes-box{background:var(--surface-2);border-radius:var(--radius-sm);padding:13px;font-size:14.5px;
+  color:var(--text);line-height:1.55;white-space:pre-wrap;margin-bottom:16px}
+
+/* ---------- Activity trail ---------- */
+.trail{margin-top:6px}
+.trail-item{display:flex;gap:11px;position:relative;padding-bottom:16px}
+.trail-item:last-child{padding-bottom:0}
+.trail-line{position:absolute;left:8px;top:20px;bottom:-2px;width:2px;background:var(--line)}
+.trail-item:last-child .trail-line{display:none}
+.trail-ic{width:18px;height:18px;border-radius:50%;flex-shrink:0;display:grid;place-items:center;
+  background:var(--surface-2);border:2px solid var(--line);z-index:1}
+.trail-ic svg{width:10px;height:10px;color:var(--text-2)}
+.trail-ic.create{background:var(--green);border-color:var(--green)}
+.trail-ic.create svg,.trail-ic.done svg,.trail-ic.email svg{color:#fff}
+.trail-ic.done{background:var(--green);border-color:var(--green)}
+.trail-ic.email{background:var(--grey);border-color:var(--grey)}
+.trail-txt{font-size:13.5px;color:var(--text);font-weight:500;line-height:1.4}
+.trail-time{font-size:11.5px;color:var(--text-3);margin-top:1px}
+
+/* ---------- Dashboard ---------- */
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:6px}
+.stat{background:var(--surface);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)}
+.stat .n{font-size:30px;font-weight:800;letter-spacing:-.03em;line-height:1}
+.stat .l{font-size:12.5px;color:var(--text-2);font-weight:600;margin-top:6px}
+.stat .l b{color:var(--green)}
+.ring-card{background:var(--surface);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);
+  margin-bottom:12px;display:flex;align-items:center;gap:16px}
+.ring{position:relative;width:74px;height:74px;flex-shrink:0}
+.ring svg{transform:rotate(-90deg)}
+.ring .rc-bg{stroke:var(--line-2)}
+.ring .rc-fg{stroke:var(--green);stroke-linecap:round;transition:stroke-dashoffset 1s cubic-bezier(.4,0,.2,1)}
+.ring .rc-num{position:absolute;inset:0;display:grid;place-items:center;font-size:17px;font-weight:800}
+.ring-info{flex:1;min-width:0}
+.ring-info .nm{font-weight:700;font-size:15px;display:flex;align-items:center;gap:8px}
+.ring-info .role{font-size:12px;color:var(--text-3);font-weight:500}
+.ring-info .stats{font-size:12.5px;color:var(--text-2);margin-top:5px;font-weight:500}
+.bar{height:6px;background:var(--line-2);border-radius:3px;margin-top:8px;overflow:hidden}
+.bar>i{display:block;height:100%;background:var(--green);border-radius:3px;transition:width 1s cubic-bezier(.4,0,.2,1)}
+
+/* ---------- Member row (Team view) ---------- */
+.mrow{background:var(--surface);border-radius:var(--radius);padding:14px;box-shadow:var(--shadow);
+  margin-bottom:10px;display:flex;align-items:center;gap:13px}
+.mrow .m-av{width:44px;height:44px;border-radius:50%;background:var(--grey);color:#fff;display:grid;
+  place-items:center;font-weight:700;font-size:16px;flex-shrink:0}
+.mrow .m-info{flex:1;min-width:0}
+.mrow .m-info .nm{font-weight:700;font-size:15px}
+.mrow .m-info .role{font-size:12.5px;color:var(--text-3)}
+.mrow .m-count{text-align:center}
+.mrow .m-count .n{font-size:20px;font-weight:800;color:var(--green)}
+.mrow .m-count .l{font-size:10px;color:var(--text-3);font-weight:600;text-transform:uppercase}
+
+/* ---------- Briefing card ---------- */
+.briefing{background:linear-gradient(135deg,var(--green),var(--green-d));color:#fff;border-radius:var(--radius);
+  padding:18px;margin:6px 18px 4px;box-shadow:0 8px 24px rgba(126,186,40,.35);position:relative;overflow:hidden}
+.briefing::after{content:"";position:absolute;right:-30px;top:-30px;width:120px;height:120px;
+  border-radius:50%;background:rgba(255,255,255,.12)}
+.briefing .bg-t{font-size:12px;font-weight:700;opacity:.9;text-transform:uppercase;letter-spacing:.06em}
+.briefing h3{font-size:19px;font-weight:800;margin:6px 0 4px;letter-spacing:-.02em}
+.briefing p{font-size:14px;margin:0;opacity:.95;line-height:1.5}
+.briefing .bclose{position:absolute;top:12px;right:12px;width:26px;height:26px;border-radius:50%;
+  background:rgba(255,255,255,.2);display:grid;place-items:center;z-index:2}
+.briefing .bclose svg{width:14px;height:14px}
+
+/* ---------- More / settings list ---------- */
+.list-card{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;margin-bottom:14px}
+.list-row{display:flex;align-items:center;gap:14px;padding:15px 16px;border-bottom:1px solid var(--line-2);transition:.12s}
+.list-row:last-child{border-bottom:none}
+.list-row:active{background:var(--surface-2)}
+.list-row .lic{width:34px;height:34px;border-radius:10px;background:var(--surface-2);display:grid;
+  place-items:center;color:var(--green);flex-shrink:0}
+.list-row .lic svg{width:19px;height:19px}
+.list-row .lt{flex:1}
+.list-row .lt .t{font-weight:600;font-size:15px}
+.list-row .lt .s{font-size:12.5px;color:var(--text-3);margin-top:1px}
+.list-row .chev{color:var(--text-3)}
+.list-row .chev svg{width:18px;height:18px}
+.switch{width:46px;height:28px;border-radius:14px;background:var(--line);position:relative;transition:.2s;flex-shrink:0}
+.switch.on{background:var(--green)}
+.switch::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;
+  background:#fff;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.switch.on::after{left:21px}
+.sync-status{font-size:12px;font-weight:600;padding:4px 10px;border-radius:10px;background:var(--surface-2);color:var(--text-2)}
+.sync-status.ok{background:var(--green);color:#fff}
+.sync-status.err{background:var(--hi-bg);color:var(--hi)}
+
+/* ---------- Focus Zone ---------- */
+.focus-wrap{text-align:center;padding:8px 0 20px}
+.focus-title{font-size:14px;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:.08em}
+.hourglass{width:130px;height:190px;margin:26px auto;position:relative}
+.hg-frame{position:absolute;inset:0}
+.hg-cap{position:absolute;left:0;right:0;height:9px;background:var(--grey);border-radius:5px;z-index:3}
+.hg-cap.top{top:0}.hg-cap.bot{bottom:0}
+.hg-glass{position:absolute;top:9px;bottom:9px;left:12px;right:12px}
+.hg-bulb{position:absolute;left:0;right:0;height:50%;overflow:hidden}
+.hg-bulb.top{top:0;clip-path:polygon(0 0,100% 0,54% 100%,46% 100%)}
+.hg-bulb.bot{bottom:0;clip-path:polygon(46% 0,54% 0,100% 100%,0 100%)}
+.hg-outline{position:absolute;inset:0;border:2.5px solid var(--grey);border-radius:2px}
+.hg-outline.top{clip-path:polygon(0 0,100% 0,54% 100%,46% 100%)}
+.hg-outline.bot{clip-path:polygon(46% 0,54% 0,100% 100%,0 100%)}
+.hg-sand-top{position:absolute;left:0;right:0;bottom:0;background:var(--green);transition:height .9s linear}
+.hg-sand-bot{position:absolute;left:0;right:0;bottom:0;background:var(--green);
+  clip-path:polygon(46% 0,54% 0,100% 100%,0 100%);transition:height .9s linear}
+.hg-stream{position:absolute;left:50%;top:50%;transform:translateX(-50%);width:3px;height:0;
+  background:var(--green);opacity:0}
+.hg-frame.run .hg-stream{height:32px;opacity:1;animation:stream .6s linear infinite}
+@keyframes stream{0%{opacity:.3}50%{opacity:1}100%{opacity:.3}}
+.focus-time{font-size:52px;font-weight:800;letter-spacing:-.03em;font-variant-numeric:tabular-nums;margin-top:6px}
+.focus-task{font-size:15px;color:var(--text-2);font-weight:600;margin-top:2px;min-height:20px}
+.focus-dur{display:flex;gap:8px;justify-content:center;margin:20px 0}
+.focus-dur button{padding:9px 16px;border-radius:20px;background:var(--surface-2);font-weight:700;
+  font-size:14px;color:var(--text-2);transition:.15s}
+.focus-dur button.sel{background:var(--grey);color:#fff}
+[data-theme="dark"] .focus-dur button.sel{background:var(--green);color:#0d1206}
+
+/* ---------- Milestone / confetti ---------- */
+#confetti{position:fixed;inset:0;z-index:200;pointer-events:none;display:none}
+.milestone{position:fixed;inset:0;z-index:201;display:none;place-items:center;padding:30px}
+.milestone.show{display:grid}
+.ms-card{background:var(--surface);border-radius:26px;padding:34px 28px;text-align:center;
+  box-shadow:var(--shadow-lg);max-width:340px;animation:pop .45s cubic-bezier(.34,1.56,.64,1)}
+@keyframes pop{from{transform:scale(.7);opacity:0}to{transform:scale(1);opacity:1}}
+.ms-badge{width:96px;height:96px;border-radius:50%;background:linear-gradient(135deg,var(--green),var(--green-d));
+  color:#fff;display:grid;place-items:center;font-size:34px;font-weight:800;margin:0 auto 18px;
+  box-shadow:0 10px 30px rgba(126,186,40,.4)}
+.ms-card h2{font-size:24px;font-weight:800;margin:0 0 6px;letter-spacing:-.02em}
+.ms-card p{color:var(--text-2);font-size:15px;margin:0 0 22px;line-height:1.5}
+
+/* ---------- Toast ---------- */
+.toast{position:fixed;bottom:calc(var(--nav-h) + var(--safe-b) + 20px);left:50%;transform:translateX(-50%) translateY(20px);
+  background:var(--grey);color:#fff;padding:12px 20px;border-radius:14px;font-size:14px;font-weight:600;
+  z-index:150;opacity:0;transition:.3s;box-shadow:var(--shadow-lg);max-width:90%;text-align:center;pointer-events:none}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+.fab-hint{position:fixed;bottom:calc(var(--nav-h) + var(--safe-b) + 44px);left:50%;transform:translateX(-50%);
+  background:var(--grey);color:#fff;font-size:12px;font-weight:600;padding:6px 12px;border-radius:10px;
+  z-index:61;opacity:0;pointer-events:none;transition:.2s}
+.fab-hint.show{opacity:1}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- Header -->
+  <header class="hdr">
+    <div class="hdr-top">
+      <div>
+        <h1 class="hdr-title" id="viewTitle">Today</h1>
+        <div class="hdr-sub" id="viewSub"></div>
+      </div>
+      <div class="hdr-actions">
+        <button class="icon-btn" id="focusBtn" title="Hyper Focus Zone">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+        </button>
+        <button class="icon-btn" id="themeBtn" title="Theme">
+          <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+        </button>
+        <div class="avatar" id="meAvatar">DH</div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Search + chips (list views only) -->
+  <div id="listControls">
+    <div class="searchbar">
+      <div class="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input type="text" id="searchInput" placeholder="Search tasks…" autocomplete="off">
+      </div>
+    </div>
+    <div class="chips" id="ctxChips"></div>
+  </div>
+
+  <!-- Briefing mount -->
+  <div id="briefingMount"></div>
+
+  <!-- Main content -->
+  <main id="content" class="view"></main>
+</div>
+
+<!-- FAB -->
+<button class="fab" id="fab" aria-label="Add task">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+</button>
+<div class="fab-hint" id="fabHint">Hold for quick capture</div>
+
+<!-- Bottom nav -->
+<nav class="nav" id="nav">
+  <button class="nav-item" data-view="all">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+    <span>All</span>
+  </button>
+  <button class="nav-item" data-view="today">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+    <span>Today</span>
+  </button>
+  <div class="nav-fab-slot"></div>
+  <button class="nav-item" data-view="overdue">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+    <span>Overdue</span>
+    <span class="badge" id="overdueBadge" style="display:none">0</span>
+  </button>
+  <button class="nav-item" data-view="team">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    <span>Team</span>
+  </button>
+  <button class="nav-item" data-view="more">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/><circle cx="5" cy="12" r="1.5"/></svg>
+    <span>More</span>
+  </button>
+</nav>
+
+<!-- Scrim + sheets -->
+<div class="scrim" id="scrim"></div>
+<div class="sheet" id="sheet"><div class="sheet-grab"></div><div id="sheetContent"></div></div>
+
+<!-- Milestone + confetti -->
+<canvas id="confetti"></canvas>
+<div class="milestone" id="milestone"><div class="ms-card" id="msCard"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   GSD — Get Stuff Done  |  single-file PWA
+   ============================================================ */
+"use strict";
+
+/* ---------- Constants / seed data ---------- */
+const CONTEXTS = ["Sales","Operations","Admin","Personal","Finance","Marketing"];
+const ME = { id:"me-denley", name:"Denley Hopkins", role:"Sales Team Leader", email:"", isMe:true };
+const SEED_MEMBERS = [
+  ME,
+  { id:"m-abi", name:"Abi Hopkins", role:"Business Development Executive", email:"abi.hopkins@wilsonscolchester.com" },
+  { id:"m-jameson", name:"Jameson Hopkins", role:"Business Development Executive", email:"jameson.hopkins@wilsonscolchester.com" },
+  { id:"m-ivan", name:"Ivan Hopkins", role:"Director", email:"ivan@wilsonscolchester.com" },
+  { id:"m-gary", name:"Gary Hopkins", role:"Director", email:"gary@wilsonscolchester.com" },
+  { id:"m-angus", name:"Angus Hopkins", role:"Director", email:"angus@wilsonscolchester.com" },
+  { id:"m-rhonwyn", name:"Rhonwyn Hopkins", role:"Business Support Executive", email:"rhonwyn.hopkins@wilsonscolchester.com" },
+];
+const MILESTONES = [10,25,50,100];
+const LS = "gsd.v1";
+
+/* ---------- State ---------- */
+let state = {
+  tasks: [],
+  members: [],
+  settings: {
+    theme:"light", supabaseUrl:"", supabaseKey:"",
+    milestonesSeen:[], briefingDismissed:"", focusDuration:25
+  }
+};
+let ui = { view:"today", ctx:"All", search:"", editingId:null, detailId:null, sb:null, syncing:false, lastSync:null };
+
+/* ---------- Utilities ---------- */
+const $ = s => document.querySelector(s);
+const el = (t,c,h)=>{const e=document.createElement(t);if(c)e.className=c;if(h!=null)e.innerHTML=h;return e;};
+const uid = ()=> Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+const nowISO = ()=> new Date().toISOString();
+const esc = s => (s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const todayStr = ()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");};
+function member(id){ return state.members.find(m=>m.id===id); }
+function initials(name){ return (name||"?").split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase(); }
+function dueLabel(d){
+  if(!d) return null;
+  const t=todayStr(); const today=new Date(t); const due=new Date(d);
+  const diff=Math.round((due-today)/86400000);
+  if(diff===0) return {txt:"Today",over:false};
+  if(diff===1) return {txt:"Tomorrow",over:false};
+  if(diff===-1) return {txt:"Yesterday",over:true};
+  if(diff<0) return {txt:Math.abs(diff)+"d ago",over:true};
+  if(diff<7) return {txt:"in "+diff+"d",over:false};
+  return {txt:new Date(d).toLocaleDateString(undefined,{month:"short",day:"numeric"}),over:false};
+}
+function relTime(iso){
+  const diff=Date.now()-new Date(iso).getTime(); const m=Math.floor(diff/60000);
+  if(m<1) return "just now"; if(m<60) return m+"m ago";
+  const h=Math.floor(m/60); if(h<24) return h+"h ago";
+  const d=Math.floor(h/24); if(d<7) return d+"d ago";
+  return new Date(iso).toLocaleDateString(undefined,{month:"short",day:"numeric"});
+}
+function isOverdue(t){ return t.status!=="done" && t.dueDate && t.dueDate<todayStr(); }
+function isToday(t){ return t.status!=="done" && t.dueDate===todayStr(); }
+
+/* ---------- Persistence ---------- */
+function save(){ localStorage.setItem(LS, JSON.stringify(state)); }
+function load(){
+  try{
+    const raw=localStorage.getItem(LS);
+    if(raw){ const p=JSON.parse(raw); state.tasks=p.tasks||[]; state.members=p.members||[]; state.settings={...state.settings,...(p.settings||{})}; }
+  }catch(e){ console.warn("load failed",e); }
+  if(!state.members.length) state.members = SEED_MEMBERS.map(m=>({...m}));
+  else { // ensure "me" always present & updated
+    if(!state.members.find(m=>m.isMe)) state.members.unshift({...ME});
+  }
+}
+
+/* ---------- Activity trail ---------- */
+function logAct(task, type, text){
+  task.activity = task.activity||[];
+  task.activity.push({ type, text, at: nowISO() });
+}
+
+/* ---------- Task CRUD ---------- */
+function newTask(data){
+  const t={
+    id:uid(), title:data.title||"Untitled", context:data.context||"Sales",
+    priority:data.priority||"Normal", dueDate:data.dueDate||"", assignee:data.assignee||"me-denley",
+    notes:data.notes||"", status:"open", recur:data.recur||"none",
+    createdAt:nowISO(), completedAt:null, updatedAt:nowISO(), activity:[]
+  };
+  logAct(t,"create","Task created");
+  return t;
+}
+function upsertTask(t){
+  t.updatedAt=nowISO();
+  const i=state.tasks.findIndex(x=>x.id===t.id);
+  if(i>=0) state.tasks[i]=t; else state.tasks.unshift(t);
+  save(); pushTask(t);
+}
+function toggleDone(id){
+  const t=state.tasks.find(x=>x.id===id); if(!t) return;
+  if(t.status==="done"){
+    t.status="open"; t.completedAt=null; logAct(t,"edit","Reopened");
+  }else{
+    t.status="done"; t.completedAt=nowISO(); logAct(t,"done","Completed");
+    if(t.recur && t.recur!=="none" && t.dueDate) spawnRecurrence(t);
+    checkMilestone();
+  }
+  upsertTask(t); render();
+}
+function spawnRecurrence(t){
+  const d=new Date(t.dueDate);
+  if(t.recur==="daily") d.setDate(d.getDate()+1);
+  else if(t.recur==="weekly") d.setDate(d.getDate()+7);
+  else if(t.recur==="monthly") d.setMonth(d.getMonth()+1);
+  const nd=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+  const nt=newTask({title:t.title,context:t.context,priority:t.priority,dueDate:nd,assignee:t.assignee,notes:t.notes,recur:t.recur});
+  logAct(nt,"create","Recurring copy created");
+  state.tasks.unshift(nt); pushTask(nt);
+  toast("↻ Next "+t.recur+" task scheduled");
+}
+function deleteTask(id){
+  const t=state.tasks.find(x=>x.id===id);
+  state.tasks=state.tasks.filter(x=>x.id!==id);
+  save(); if(t) pushTaskDelete(t);
+  closeSheet(); render(); toast("Task deleted");
+}
+function completedCount(){ return state.tasks.filter(t=>t.status==="done").length; }
+
+/* ---------- Milestones ---------- */
+function checkMilestone(){
+  const c=completedCount();
+  for(const m of MILESTONES){
+    if(c===m && !state.settings.milestonesSeen.includes(m)){
+      state.settings.milestonesSeen.push(m); save();
+      setTimeout(()=>showMilestone(m),350);
+    }
+  }
+}
+function showMilestone(m){
+  const msgs={10:"You're building momentum!",25:"A quarter-century of done. Unstoppable.",50:"Half a hundred tasks crushed.",100:"Triple digits. Legendary focus."};
+  $("#msCard").innerHTML=`
+    <div class="ms-badge">${m}</div>
+    <h2>${m} tasks done!</h2>
+    <p>${msgs[m]}</p>
+    <button class="btn" onclick="closeMilestone()">Keep going</button>`;
+  $("#milestone").classList.add("show");
+  fireConfetti();
+}
+function closeMilestone(){ $("#milestone").classList.remove("show"); }
+
+/* ---------- Confetti ---------- */
+function fireConfetti(){
+  const cv=$("#confetti"); cv.style.display="block";
+  cv.width=innerWidth; cv.height=innerHeight;
+  const ctx=cv.getContext("2d");
+  const cols=["#7EBA28","#8fce30","#383839","#f5a623","#ffffff"];
+  const parts=Array.from({length:140},()=>({x:Math.random()*cv.width,y:-20-Math.random()*cv.height*.4,
+    r:4+Math.random()*6,c:cols[Math.random()*cols.length|0],vy:2+Math.random()*4,vx:-2+Math.random()*4,
+    rot:Math.random()*6,vr:-.2+Math.random()*.4}));
+  let frames=0;
+  (function loop(){
+    ctx.clearRect(0,0,cv.width,cv.height); frames++;
+    parts.forEach(p=>{p.y+=p.vy;p.x+=p.vx;p.vy+=.05;p.rot+=p.vr;
+      ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.rot);ctx.fillStyle=p.c;
+      ctx.fillRect(-p.r/2,-p.r/2,p.r,p.r*.6);ctx.restore();});
+    if(frames<200) requestAnimationFrame(loop); else cv.style.display="none";
+  })();
+}
+
+/* ---------- Theme ---------- */
+function applyTheme(){
+  document.documentElement.setAttribute("data-theme", state.settings.theme);
+  $("#themeIcon").innerHTML = state.settings.theme==="dark"
+    ? '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>'
+    : '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>';
+  const tc=document.querySelector('meta[name=theme-color]');
+  if(tc) tc.setAttribute("content", state.settings.theme==="dark"?"#1a1b17":"#7EBA28");
+}
+function toggleTheme(){ state.settings.theme=state.settings.theme==="dark"?"light":"dark"; save(); applyTheme(); }
+
+/* ---------- Toast ---------- */
+let toastT;
+function toast(msg){
+  const t=$("#toast"); t.textContent=msg; t.classList.add("show");
+  clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove("show"),2600);
+}
+
+/* ============================================================
+   RENDERING
+   ============================================================ */
+function render(){
+  updateNav(); updateBadges();
+  const c=$("#content");
+  const showList=["all","today","overdue"].includes(ui.view);
+  $("#listControls").style.display=showList?"block":"none";
+  $("#briefingMount").innerHTML="";
+  if(showList){ renderBriefing(); c.innerHTML=""; c.appendChild(renderList()); }
+  else if(ui.view==="team") c.innerHTML=renderTeam();
+  else if(ui.view==="more") c.innerHTML=renderMore();
+  setHeader();
+}
+function setHeader(){
+  const titles={all:"All Actions",today:"Today",overdue:"Overdue",team:"Team",more:"More"};
+  $("#viewTitle").textContent=titles[ui.view];
+  const subs={
+    all:state.tasks.filter(t=>t.status!=="done").length+" open · "+completedCount()+" done",
+    today:new Date().toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric"}),
+    overdue:state.tasks.filter(isOverdue).length+" need attention",
+    team:state.members.length+" members",more:"Settings & tools"
+  };
+  $("#viewSub").textContent=subs[ui.view]||"";
+}
+function updateNav(){
+  document.querySelectorAll(".nav-item").forEach(n=>n.classList.toggle("active",n.dataset.view===ui.view));
+}
+function updateBadges(){
+  const o=state.tasks.filter(isOverdue).length;
+  const b=$("#overdueBadge");
+  if(o>0){ b.style.display="grid"; b.textContent=o; } else b.style.display="none";
+}
+
+/* ---------- Chips ---------- */
+function renderChips(){
+  const wrap=$("#ctxChips"); wrap.innerHTML="";
+  ["All",...CONTEXTS].forEach(c=>{
+    const chip=el("button","chip"+(ui.ctx===c?" active":""),c);
+    chip.onclick=()=>{ui.ctx=c;renderChips();render();};
+    wrap.appendChild(chip);
+  });
+}
+
+/* ---------- List view ---------- */
+function filteredTasks(){
+  let list=state.tasks.slice();
+  if(ui.view==="today") list=list.filter(t=>isToday(t)||isOverdue(t));
+  else if(ui.view==="overdue") list=list.filter(isOverdue);
+  if(ui.ctx!=="All") list=list.filter(t=>t.context===ui.ctx);
+  if(ui.search){ const q=ui.search.toLowerCase();
+    list=list.filter(t=>t.title.toLowerCase().includes(q)||(t.notes||"").toLowerCase().includes(q)); }
+  return list;
+}
+function renderList(){
+  const frag=document.createDocumentFragment();
+  let list=filteredTasks();
+  const open=list.filter(t=>t.status!=="done");
+  const done=list.filter(t=>t.status==="done");
+  // priority + due sort
+  const prio={High:0,Normal:1,Low:2};
+  open.sort((a,b)=>{
+    const ao=isOverdue(a),bo=isOverdue(b); if(ao!==bo) return ao?-1:1;
+    if(prio[a.priority]!==prio[b.priority]) return prio[a.priority]-prio[b.priority];
+    if(a.dueDate&&b.dueDate) return a.dueDate<b.dueDate?-1:1;
+    if(a.dueDate) return -1; if(b.dueDate) return 1; return 0;
+  });
+  if(!list.length){
+    frag.appendChild(el("div","empty",
+      `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+       <h3>${ui.view==="overdue"?"Nothing overdue 🎉":ui.view==="today"?"Today is clear":"No tasks yet"}</h3>
+       <p>${ui.view==="overdue"?"You're all caught up.":"Tap the + button to add your first action."}</p>`));
+    return frag;
+  }
+  if(open.length){
+    const h=el("div","section-h",`<h2>${ui.view==="today"?"Due & overdue":"Open"}</h2><span class="count">${open.length}</span>`);
+    frag.appendChild(h);
+    open.forEach(t=>frag.appendChild(taskCard(t)));
+  }
+  if(done.length){
+    const h=el("div","section-h",`<h2>Completed</h2><span class="count">${done.length}</span>`);
+    frag.appendChild(h);
+    done.forEach(t=>frag.appendChild(taskCard(t)));
+  }
+  return frag;
+}
+function taskCard(t){
+  const card=el("div","task"+(t.status==="done"?" done":""));
+  const pc={High:"hi",Normal:"mid",Low:"lo"}[t.priority];
+  const du=dueLabel(t.dueDate);
+  const asg=member(t.assignee);
+  const asgHtml=(asg&&!asg.isMe)?`<span class="mini-av" style="background:${colorFor(asg.id)}">${initials(asg.name)}</span>`:"";
+  card.innerHTML=`
+    <div class="check" data-check="${t.id}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><path d="M20 6L9 17l-5-5"/></svg></div>
+    <div class="task-body">
+      <div class="task-title">${esc(t.title)}</div>
+      <div class="task-meta">
+        <span class="pill ${pc}">${t.priority==="High"?"● ":t.priority==="Low"?"":"● "}${t.priority}</span>
+        <span class="pill ctx">${t.context}</span>
+        ${du?`<span class="pill due ${du.over?"over":""}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>${du.txt}</span>`:""}
+        ${t.recur&&t.recur!=="none"?`<span class="pill recur"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17 2l4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg></span>`:""}
+        ${asgHtml}
+      </div>
+    </div>`;
+  card.querySelector("[data-check]").onclick=(e)=>{e.stopPropagation();bump(e.currentTarget);toggleDone(t.id);};
+  card.onclick=()=>openDetail(t.id);
+  return card;
+}
+function bump(elm){ elm.style.transform="scale(1.25)"; setTimeout(()=>elm.style.transform="",150); }
+
+/* deterministic color per member */
+function colorFor(id){
+  let h=0; for(const c of id) h=(h*31+c.charCodeAt(0))%360;
+  return `oklch(0.55 0.12 ${h})`;
+}
+
+/* ---------- Briefing card (before 9am) ---------- */
+function renderBriefing(){
+  const hr=new Date().getHours();
+  if(hr>=9) return;
+  if(state.settings.briefingDismissed===todayStr()) return;
+  if(ui.view!=="today") return;
+  const todays=state.tasks.filter(t=>isToday(t));
+  const over=state.tasks.filter(isOverdue);
+  const hi=todays.filter(t=>t.priority==="High").length;
+  let msg;
+  if(!todays.length&&!over.length) msg="No tasks scheduled for today. A clean slate — plan your wins.";
+  else msg=`You have <b>${todays.length}</b> task${todays.length!==1?"s":""} today${hi?`, ${hi} high-priority`:""}${over.length?` · <b>${over.length}</b> overdue`:""}. Let's get stuff done.`;
+  const b=el("div","briefing");
+  const g=hr<5?"Early start":hr<9?"Good morning":"Hello";
+  b.innerHTML=`
+    <button class="bclose" onclick="dismissBriefing()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+    <div class="bg-t">☀ Morning briefing</div>
+    <h3>${g}, Denley</h3>
+    <p>${msg.replace(/<b>/g,'<b style="font-weight:800">')}</p>`;
+  $("#briefingMount").appendChild(b);
+}
+function dismissBriefing(){ state.settings.briefingDismissed=todayStr(); save(); $("#briefingMount").innerHTML=""; }
+
+/* ---------- Team view ---------- */
+function memberStats(id){
+  const mine=state.tasks.filter(t=>t.assignee===id);
+  const done=mine.filter(t=>t.status==="done");
+  const open=mine.filter(t=>t.status!=="done");
+  const onTime=done.filter(t=>!t.dueDate || (t.completedAt && t.completedAt.slice(0,10)<=t.dueDate)).length;
+  const rate=done.length?Math.round(onTime/done.length*100):0;
+  return {total:mine.length,done:done.length,open:open.length,overdue:mine.filter(isOverdue).length,onTime,rate};
+}
+function renderTeam(){
+  // dashboard
+  const all=state.tasks;
+  const totalDone=all.filter(t=>t.status==="done").length;
+  const teamOpen=all.filter(t=>t.status!=="done").length;
+  const teamOver=all.filter(isOverdue).length;
+  const doneWithDue=all.filter(t=>t.status==="done");
+  const onTimeAll=doneWithDue.filter(t=>!t.dueDate||(t.completedAt&&t.completedAt.slice(0,10)<=t.dueDate)).length;
+  const teamRate=doneWithDue.length?Math.round(onTimeAll/doneWithDue.length*100):0;
+
+  let html=`
+  <div class="stat-grid">
+    <div class="stat"><div class="n">${totalDone}</div><div class="l">Completed <b>all-time</b></div></div>
+    <div class="stat"><div class="n">${teamOpen}</div><div class="l">Open across team</div></div>
+    <div class="stat"><div class="n" style="color:var(--green)">${teamRate}%</div><div class="l">On-time rate</div></div>
+    <div class="stat"><div class="n" style="color:${teamOver?'var(--hi)':'var(--text)'}">${teamOver}</div><div class="l">Overdue items</div></div>
+  </div>
+  <div class="section-h"><h2>On-time completion</h2><span class="count">by member</span></div>`;
+
+  // rings per member (only those with tasks, plus me)
+  const withTasks=state.members.filter(m=>memberStats(m.id).total>0);
+  const showMembers=withTasks.length?withTasks:state.members.filter(m=>m.isMe);
+  showMembers.forEach(m=>{
+    const s=memberStats(m.id);
+    const R=30,C=2*Math.PI*R, off=C-(s.rate/100)*C;
+    html+=`
+    <div class="ring-card">
+      <div class="ring">
+        <svg width="74" height="74"><circle class="rc-bg" cx="37" cy="37" r="${R}" fill="none" stroke-width="7"/>
+        <circle class="rc-fg" cx="37" cy="37" r="${R}" fill="none" stroke-width="7"
+          stroke-dasharray="${C}" stroke-dashoffset="${off}"/></svg>
+        <div class="rc-num">${s.rate}%</div>
+      </div>
+      <div class="ring-info">
+        <div class="nm">${esc(m.name)}${m.isMe?' <span style="font-size:11px;color:var(--green);font-weight:700">· you</span>':''}</div>
+        <div class="role">${esc(m.role)}</div>
+        <div class="stats">${s.done} done · ${s.open} open${s.overdue?` · <span style="color:var(--hi);font-weight:700">${s.overdue} overdue</span>`:''}</div>
+        <div class="bar"><i style="width:${s.total?Math.round(s.done/s.total*100):0}%"></i></div>
+      </div>
+    </div>`;
+  });
+
+  html+=`<div class="section-h"><h2>Team members</h2><span class="count">${state.members.length}</span></div>`;
+  state.members.forEach(m=>{
+    const s=memberStats(m.id);
+    html+=`
+    <div class="mrow" data-member="${m.id}">
+      <div class="m-av" style="background:${m.isMe?'var(--green)':colorFor(m.id)}">${initials(m.name)}</div>
+      <div class="m-info"><div class="nm">${esc(m.name)}${m.isMe?' · you':''}</div><div class="role">${esc(m.role)}</div></div>
+      <div class="m-count"><div class="n">${s.open}</div><div class="l">Open</div></div>
+    </div>`;
+  });
+  setTimeout(()=>{ // animate rings from full offset
+    document.querySelectorAll(".mrow[data-member]").forEach(row=>{
+      row.onclick=()=>openMemberSheet(row.dataset.member);
+    });
+  },0);
+  return html;
+}
+
+/* ---------- More view ---------- */
+function renderMore(){
+  const synced=state.settings.supabaseUrl?'<span class="sync-status ok">Connected</span>':'<span class="sync-status">Not set up</span>';
+  return `
+  <div class="section-h"><h2>Sync & data</h2></div>
+  <div class="list-card">
+    <div class="list-row" onclick="openSyncSheet()">
+      <div class="lic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 0 1-9 9m0 0a9 9 0 0 1-9-9m9 9V3m0 0a9 9 0 0 1 9 9M3 12a9 9 0 0 1 9-9"/></svg></div>
+      <div class="lt"><div class="t">Cloud sync (Supabase)</div><div class="s">Sync across phone & desktop</div></div>
+      ${synced}
+    </div>
+    <div class="list-row" onclick="doSync()">
+      <div class="lic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16"/></svg></div>
+      <div class="lt"><div class="t">Sync now</div><div class="s">${ui.lastSync?"Last: "+relTime(ui.lastSync):"Pull & push all changes"}</div></div>
+      <div class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></div>
+    </div>
+    <div class="list-row" onclick="exportBackup()">
+      <div class="lic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg></div>
+      <div class="lt"><div class="t">Export backup</div><div class="s">Download all data as JSON</div></div>
+      <div class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></div>
+    </div>
+    <div class="list-row" onclick="$('#restoreFile').click()">
+      <div class="lic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 8l5-5 5 5M12 3v12"/></svg></div>
+      <div class="lt"><div class="t">Restore from backup</div><div class="s">Import a JSON file</div></div>
+      <div class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></div>
+    </div>
+  </div>
+
+  <div class="section-h"><h2>Tools</h2></div>
+  <div class="list-card">
+    <div class="list-row" onclick="openFocus()">
+      <div class="lic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
+      <div class="lt"><div class="t">Hyper Focus Zone</div><div class="s">Timed deep-work sessions</div></div>
+      <div class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></div>
+    </div>
+    <div class="list-row" onclick="toggleTheme()">
+      <div class="lic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></div>
+      <div class="lt"><div class="t">Dark mode</div><div class="s">Toggle appearance</div></div>
+      <div class="switch ${state.settings.theme==='dark'?'on':''}"></div>
+    </div>
+  </div>
+
+  <div class="section-h"><h2>Milestones</h2></div>
+  <div class="list-card"><div class="list-row" style="cursor:default">
+    <div class="lic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6M18 9h1.5a2.5 2.5 0 0 0 0-5H18M4 22h16M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22M18 2H6v7a6 6 0 0 0 12 0V2z"/></svg></div>
+    <div class="lt"><div class="t">${completedCount()} completed</div><div class="s">Next: ${MILESTONES.find(m=>m>completedCount())||"∞"} tasks</div></div>
+  </div></div>
+
+  <div style="text-align:center;color:var(--text-3);font-size:12px;margin-top:20px">GSD · Get Stuff Done · v1.0<br>Denley Hopkins · Sales Team Leader</div>
+  `;
+}
+
+/* ============================================================
+   SHEETS
+   ============================================================ */
+function openSheet(html){
+  $("#sheetContent").innerHTML='<div id="sheetInner">'+html+'</div>';
+  $("#scrim").classList.add("show"); $("#sheet").classList.add("show");
+}
+function closeSheet(){ $("#scrim").classList.remove("show"); $("#sheet").classList.remove("show"); ui.editingId=null; ui.detailId=null; stopFocus(); }
+
+/* ---------- Task editor ---------- */
+function openEditor(id){
+  const t = id ? state.tasks.find(x=>x.id===id) : {title:"",context:"Sales",priority:"Normal",dueDate:"",assignee:"me-denley",notes:"",recur:"none"};
+  ui.editingId=id;
+  const memberOpts=state.members.map(m=>`<option value="${m.id}" ${t.assignee===m.id?"selected":""}>${esc(m.name)}${m.isMe?" (me)":""}</option>`).join("");
+  const ctxOpts=CONTEXTS.map(c=>`<option ${t.context===c?"selected":""}>${c}</option>`).join("");
+  const recOpts=[["none","Does not repeat"],["daily","Daily"],["weekly","Weekly"],["monthly","Monthly"]]
+    .map(([v,l])=>`<option value="${v}" ${t.recur===v?"selected":""}>${l}</option>`).join("");
+  openSheet(`
+    <div class="sheet-hd"><h2>${id?"Edit task":"New task"}</h2><button class="sheet-close" onclick="closeSheet()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>
+    <div class="sheet-body">
+      <div class="field"><label>Title</label><input type="text" id="f-title" value="${esc(t.title)}" placeholder="What needs doing?" autofocus></div>
+      <div class="field"><label>Priority</label>
+        <div class="seg" id="f-prio">
+          ${["High","Normal","Low"].map(p=>`<button data-p="${p}" class="${t.priority===p?"sel":""}">${p}</button>`).join("")}
+        </div>
+      </div>
+      <div class="field"><label>Context</label><select id="f-ctx">${ctxOpts}</select></div>
+      <div class="field"><label>Due date</label><input type="date" id="f-due" value="${t.dueDate||""}"></div>
+      <div class="field"><label>Assignee</label><select id="f-asg">${memberOpts}</select></div>
+      <div class="field"><label>Repeat</label><select id="f-rec">${recOpts}</select></div>
+      <div class="field"><label>Notes</label><textarea id="f-notes" placeholder="Details, links, context…">${esc(t.notes)}</textarea></div>
+      <button class="btn" onclick="saveEditor()">${id?"Save changes":"Add task"}</button>
+      ${id?'<button class="btn danger" style="margin-top:10px" onclick="confirmDelete()">Delete task</button>':""}
+    </div>`);
+  let sel=t.priority;
+  document.querySelectorAll("#f-prio button").forEach(b=>b.onclick=()=>{
+    document.querySelectorAll("#f-prio button").forEach(x=>x.classList.remove("sel"));
+    b.classList.add("sel"); sel=b.dataset.p; $("#sheetInner").dataset.prio=sel;
+  });
+  $("#sheetInner").dataset.prio=t.priority;
+}
+function saveEditor(){
+  const title=$("#f-title").value.trim();
+  if(!title){ toast("Add a title first"); $("#f-title").focus(); return; }
+  const data={
+    title, priority:$("#sheetInner").dataset.prio||"Normal", context:$("#f-ctx").value,
+    dueDate:$("#f-due").value, assignee:$("#f-asg").value, notes:$("#f-notes").value.trim(), recur:$("#f-rec").value
+  };
+  if(ui.editingId){
+    const t=state.tasks.find(x=>x.id===ui.editingId);
+    const changed=[];
+    if(t.title!==data.title) changed.push("title");
+    if(t.priority!==data.priority) changed.push("priority");
+    if(t.dueDate!==data.dueDate) changed.push("due date");
+    if(t.assignee!==data.assignee) changed.push("assignee");
+    Object.assign(t,data);
+    if(changed.length) logAct(t,"edit","Edited "+changed.join(", "));
+    upsertTask(t); toast("Saved");
+  }else{
+    const t=newTask(data); state.tasks.unshift(t); upsertTask(t); toast("Task added");
+  }
+  closeSheet(); render();
+}
+function confirmDelete(){ if(confirm("Delete this task permanently?")) deleteTask(ui.editingId); }
+
+/* ---------- Quick capture (long-press) ---------- */
+function openQuickCapture(){
+  ui.editingId=null;
+  openSheet(`
+    <div class="sheet-hd"><h2>⚡ Quick capture</h2><button class="sheet-close" onclick="closeSheet()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>
+    <div class="sheet-body">
+      <div class="field"><input type="text" id="qc-title" placeholder="Type a task and hit add…" autofocus style="font-size:18px;padding:16px"></div>
+      <p style="color:var(--text-3);font-size:13px;margin:-6px 2px 16px">Captured to Sales · Normal priority. Edit details later.</p>
+      <button class="btn" onclick="saveQuick()">Add to inbox</button>
+    </div>`);
+  setTimeout(()=>{ const i=$("#qc-title"); if(i){i.focus();
+    i.addEventListener("keydown",e=>{if(e.key==="Enter")saveQuick();}); }},150);
+}
+function saveQuick(){
+  const title=$("#qc-title").value.trim();
+  if(!title){ toast("Nothing to capture"); return; }
+  const t=newTask({title}); state.tasks.unshift(t); upsertTask(t);
+  closeSheet(); render(); toast("⚡ Captured");
+}
+
+/* ---------- Task detail ---------- */
+function openDetail(id){
+  const t=state.tasks.find(x=>x.id===id); if(!t) return; ui.detailId=id;
+  const asg=member(t.assignee); const pc={High:"hi",Normal:"mid",Low:"lo"}[t.priority];
+  const du=dueLabel(t.dueDate);
+  const trail=(t.activity||[]).slice().reverse().map(a=>{
+    const ic={create:"create",done:"done",email:"email",edit:""}[a.type]||"";
+    const svg={
+      create:'<path d="M12 5v14M5 12h14"/>',
+      done:'<path d="M20 6L9 17l-5-5"/>',
+      email:'<path d="M4 4h16v16H4z"/><path d="M22 6l-10 7L2 6"/>',
+      edit:'<path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>'
+    }[a.type]||'<circle cx="12" cy="12" r="3"/>';
+    return `<div class="trail-item"><div class="trail-line"></div>
+      <div class="trail-ic ${ic}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">${svg}</svg></div>
+      <div><div class="trail-txt">${esc(a.text)}</div><div class="trail-time">${relTime(a.at)} · ${new Date(a.at).toLocaleString(undefined,{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"})}</div></div></div>`;
+  }).join("");
+  const emailBtn = (asg&&!asg.isMe&&asg.email)
+    ? `<button class="btn ghost row" onclick="openEmailSheet('${t.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 7l-10 6L2 7"/></svg>Email ${esc(asg.name.split(" ")[0])} a follow-up</button>` : "";
+  openSheet(`
+    <div class="sheet-hd"><h2>Task</h2><button class="sheet-close" onclick="closeSheet()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>
+    <div class="sheet-body">
+      <div class="detail-title">${esc(t.title)}</div>
+      <div class="detail-grid">
+        <div class="dcell"><div class="k">Priority</div><div class="v"><span class="pill ${pc}" style="margin:0">${t.priority}</span></div></div>
+        <div class="dcell"><div class="k">Context</div><div class="v">${t.context}</div></div>
+        <div class="dcell"><div class="k">Due</div><div class="v" style="${du&&du.over?'color:var(--hi)':''}">${du?du.txt:"—"}</div></div>
+        <div class="dcell"><div class="k">Assignee</div><div class="v">${asg?(asg.isMe?"You":esc(asg.name.split(" ")[0])):"—"}</div></div>
+      </div>
+      ${t.recur&&t.recur!=="none"?`<div class="dcell" style="margin-bottom:16px"><div class="k">Repeats</div><div class="v" style="text-transform:capitalize">↻ ${t.recur}</div></div>`:""}
+      ${t.notes?`<div class="field"><label>Notes</label><div class="notes-box">${esc(t.notes)}</div></div>`:""}
+      <div class="btn-2">
+        <button class="btn ${t.status==='done'?'ghost':''}" onclick="toggleDone('${t.id}');closeSheet()">${t.status==="done"?"Reopen":"✓ Mark done"}</button>
+        <button class="btn ghost" style="flex:0 0 54px" onclick="openEditor('${t.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
+      </div>
+      ${emailBtn?`<div style="margin-top:10px">${emailBtn}</div>`:""}
+      <div class="section-h" style="margin-top:26px"><h2>Activity trail</h2><span class="count">${(t.activity||[]).length}</span></div>
+      <div class="trail">${trail||'<p style="color:var(--text-3);font-size:13px">No activity yet.</p>'}</div>
+    </div>`);
+}
+
+/* ---------- Email follow-up templates ---------- */
+function openEmailSheet(id){
+  const t=state.tasks.find(x=>x.id===id); const asg=member(t.assignee);
+  const fn=asg.name.split(" ")[0];
+  const du=t.dueDate?new Date(t.dueDate).toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric"}):"as soon as possible";
+  const templates=[
+    {name:"Friendly nudge",subject:`Quick nudge: ${t.title}`,
+     body:`Hi ${fn},\n\nJust a friendly nudge on "${t.title}" (${t.context}, ${t.priority.toLowerCase()} priority), due ${du}.\n\nHow's it looking? Shout if you need anything from me.\n\nThanks,\nDenley`},
+    {name:"Status request",subject:`Status update: ${t.title}`,
+     body:`Hi ${fn},\n\nCould you send me a quick status on "${t.title}"? It's marked ${t.priority.toLowerCase()} priority under ${t.context}, due ${du}.\n\nA line on progress and any blockers would be great.\n\nCheers,\nDenley`},
+    {name:"New assignment",subject:`Assigned to you: ${t.title}`,
+     body:`Hi ${fn},\n\nI've assigned "${t.title}" to you.\n\n• Context: ${t.context}\n• Priority: ${t.priority}\n• Due: ${du}${t.notes?`\n• Notes: ${t.notes}`:""}\n\nLet me know if the timeline works.\n\nThanks,\nDenley`},
+    {name:"Overdue chase",subject:`Overdue: ${t.title}`,
+     body:`Hi ${fn},\n\n"${t.title}" was due ${du} and is now showing as overdue. Could you let me know where things stand and a realistic completion date?\n\nHappy to help clear any blockers.\n\nThanks,\nDenley`},
+  ];
+  openSheet(`
+    <div class="sheet-hd"><h2>Email ${esc(fn)}</h2><button class="sheet-close" onclick="closeSheet()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>
+    <div class="sheet-body">
+      <p style="color:var(--text-2);font-size:13.5px;margin:0 2px 14px">Pick a template — it opens in your mail app pre-filled to <b>${esc(asg.email)}</b>.</p>
+      ${templates.map((tp,i)=>`
+        <div class="list-card" style="margin-bottom:10px"><div class="list-row" onclick="sendEmail('${t.id}',${i})">
+          <div class="lic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 7l-10 6L2 7"/></svg></div>
+          <div class="lt"><div class="t">${tp.name}</div><div class="s">${esc(tp.subject)}</div></div>
+          <div class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></div>
+        </div></div>`).join("")}
+    </div>`);
+  window._emailTemplates={id,templates};
+}
+function sendEmail(id,i){
+  const {templates}=window._emailTemplates;
+  const t=state.tasks.find(x=>x.id===id); const asg=member(t.assignee); const tp=templates[i];
+  const url=`mailto:${asg.email}?subject=${encodeURIComponent(tp.subject)}&body=${encodeURIComponent(tp.body)}`;
+  logAct(t,"email",`Emailed ${asg.name.split(" ")[0]}: "${tp.name}"`); upsertTask(t);
+  window.location.href=url;
+  closeSheet(); toast("📧 Email drafted"); render();
+}
+
+/* ---------- Member sheet ---------- */
+function openMemberSheet(id){
+  const m=member(id); const s=memberStats(id);
+  const tasks=state.tasks.filter(t=>t.assignee===id).slice(0,20);
+  const R=34,C=2*Math.PI*R,off=C-(s.rate/100)*C;
+  openSheet(`
+    <div class="sheet-hd"><h2>${esc(m.name.split(" ")[0])}</h2><button class="sheet-close" onclick="closeSheet()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>
+    <div class="sheet-body">
+      <div style="display:flex;align-items:center;gap:16px;margin-bottom:18px">
+        <div class="m-av" style="width:60px;height:60px;font-size:22px;background:${m.isMe?'var(--green)':colorFor(m.id)}">${initials(m.name)}</div>
+        <div><div style="font-weight:800;font-size:19px">${esc(m.name)}</div><div style="color:var(--text-3);font-size:14px">${esc(m.role)}</div>${m.email?`<div style="color:var(--green);font-size:13px;margin-top:2px">${esc(m.email)}</div>`:""}</div>
+      </div>
+      <div class="ring-card" style="margin-bottom:16px">
+        <div class="ring" style="width:88px;height:88px"><svg width="88" height="88"><circle class="rc-bg" cx="44" cy="44" r="${R}" fill="none" stroke-width="8"/><circle class="rc-fg" cx="44" cy="44" r="${R}" fill="none" stroke-width="8" stroke-dasharray="${C}" stroke-dashoffset="${off}"/></svg><div class="rc-num" style="font-size:20px">${s.rate}%</div></div>
+        <div class="ring-info"><div class="nm">On-time completion</div><div class="stats">${s.done} completed · ${s.onTime} on time<br>${s.open} open${s.overdue?` · <span style="color:var(--hi)">${s.overdue} overdue</span>`:""}</div></div>
+      </div>
+      <div class="section-h"><h2>Tasks</h2><span class="count">${tasks.length}</span></div>
+      ${tasks.length?"":'<p style="color:var(--text-3);font-size:13px">No tasks assigned.</p>'}
+      <div id="memberTasks"></div>
+    </div>`);
+  const mt=$("#memberTasks");
+  tasks.forEach(t=>mt.appendChild(taskCard(t)));
+}
+
+/* ============================================================
+   HYPER FOCUS ZONE
+   ============================================================ */
+let focus={timer:null,remaining:0,total:0,running:false,taskId:null};
+function openFocus(){
+  const openTasks=state.tasks.filter(t=>t.status!=="done");
+  const opts=`<option value="">No specific task — just focus</option>`+
+    openTasks.map(t=>`<option value="${t.id}">${esc(t.title)}</option>`).join("");
+  const d=state.settings.focusDuration;
+  openSheet(`
+    <div class="sheet-hd"><h2>Hyper Focus Zone</h2><button class="sheet-close" onclick="closeSheet()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>
+    <div class="sheet-body">
+      <div class="focus-wrap">
+        <div class="focus-title">Deep work session</div>
+        <div class="hourglass"><div class="hg-frame" id="hgFrame">
+          <div class="hg-cap top"></div>
+          <div class="hg-glass">
+            <div class="hg-bulb top"><div class="hg-sand-top" id="sandTop" style="height:100%"></div></div>
+            <div class="hg-outline top"></div>
+            <div class="hg-bulb bot"><div class="hg-sand-bot" id="sandBot" style="height:0%"></div></div>
+            <div class="hg-outline bot"></div>
+            <div class="hg-stream"></div>
+          </div>
+          <div class="hg-cap bot"></div>
+        </div></div>
+        <div class="focus-time" id="focusTime">${d}:00</div>
+        <div class="focus-task" id="focusTaskLabel"></div>
+        <div class="focus-dur" id="focusDur">
+          ${[15,25,45,60].map(m=>`<button data-m="${m}" class="${d===m?"sel":""}">${m}m</button>`).join("")}
+        </div>
+        <div class="field" style="text-align:left"><label>Focus on</label><select id="focusTask">${opts}</select></div>
+        <button class="btn" id="focusStartBtn" onclick="startFocus()">Start focusing</button>
+      </div>
+    </div>`);
+  document.querySelectorAll("#focusDur button").forEach(b=>b.onclick=()=>{
+    if(focus.running) return;
+    document.querySelectorAll("#focusDur button").forEach(x=>x.classList.remove("sel"));
+    b.classList.add("sel"); state.settings.focusDuration=+b.dataset.m; save();
+    $("#focusTime").textContent=b.dataset.m+":00";
+  });
+}
+function startFocus(){
+  if(focus.running){ stopFocus(); return; }
+  const mins=state.settings.focusDuration;
+  focus.total=mins*60; focus.remaining=focus.total; focus.running=true;
+  focus.taskId=$("#focusTask").value;
+  const label=focus.taskId?state.tasks.find(t=>t.id===focus.taskId)?.title:"Free focus";
+  $("#focusTaskLabel").textContent=label?"→ "+label:"";
+  $("#focusStartBtn").textContent="Stop session";
+  $("#focusStartBtn").classList.add("ghost");
+  $("#hgFrame").classList.add("run");
+  tickFocus();
+  focus.timer=setInterval(tickFocus,1000);
+}
+function tickFocus(){
+  if(!focus.running) return;
+  const m=Math.floor(focus.remaining/60), s=focus.remaining%60;
+  const ft=$("#focusTime"); if(ft) ft.textContent=m+":"+String(s).padStart(2,"0");
+  const pct=focus.remaining/focus.total;
+  const st=$("#sandTop"), sb=$("#sandBot");
+  if(st) st.style.height=(pct*100)+"%";
+  if(sb) sb.style.height=((1-pct)*100)+"%";
+  if(focus.remaining<=0){ endFocus(); return; }
+  focus.remaining--;
+}
+function endFocus(){
+  clearInterval(focus.timer); focus.running=false;
+  const hg=$("#hgFrame"); if(hg) hg.classList.remove("run");
+  const st=$("#sandTop"),sb=$("#sandBot"); if(st)st.style.height="0%"; if(sb)sb.style.height="100%";
+  toast("🎯 Focus session complete!"); fireConfetti();
+  if(focus.taskId){ const btn=$("#focusStartBtn");
+    if(btn){ btn.textContent="Session done — mark task complete";
+      btn.classList.remove("ghost");
+      btn.onclick=()=>{toggleDone(focus.taskId);closeSheet();}; } }
+  else { const btn=$("#focusStartBtn"); if(btn){btn.textContent="Start again";btn.classList.remove("ghost");btn.onclick=startFocus;} }
+}
+function stopFocus(){
+  if(focus.timer) clearInterval(focus.timer);
+  focus.running=false;
+  const hg=$("#hgFrame"); if(hg) hg.classList.remove("run");
+  const btn=$("#focusStartBtn"); if(btn){btn.textContent="Start focusing";btn.classList.remove("ghost");btn.onclick=startFocus;}
+}
+
+/* ============================================================
+   SUPABASE SYNC
+   ============================================================ */
+async function ensureSupabase(){
+  if(!state.settings.supabaseUrl||!state.settings.supabaseKey) return null;
+  if(ui.sb) return ui.sb;
+  if(!window.supabase){
+    await new Promise((res,rej)=>{
+      const s=document.createElement("script");
+      s.src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js";
+      s.onload=res; s.onerror=rej; document.head.appendChild(s);
+    }).catch(()=>{ throw new Error("Could not load Supabase library (offline?)"); });
+  }
+  ui.sb=window.supabase.createClient(state.settings.supabaseUrl,state.settings.supabaseKey);
+  return ui.sb;
+}
+function openSyncSheet(){
+  openSheet(`
+    <div class="sheet-hd"><h2>Cloud sync</h2><button class="sheet-close" onclick="closeSheet()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>
+    <div class="sheet-body">
+      <p style="color:var(--text-2);font-size:13.5px;margin:0 2px 16px;line-height:1.55">Paste your Supabase <b>Project URL</b> and <b>anon public key</b> (Project Settings → API). Your data then syncs across every device using the same keys.</p>
+      <div class="field"><label>Supabase URL</label><input type="text" id="sb-url" value="${esc(state.settings.supabaseUrl)}" placeholder="https://xxxx.supabase.co" autocomplete="off" autocapitalize="off"></div>
+      <div class="field"><label>Anon public key</label><textarea id="sb-key" placeholder="eyJhbGci…" style="min-height:80px;font-size:13px;font-family:monospace">${esc(state.settings.supabaseKey)}</textarea></div>
+      <button class="btn" onclick="saveSync()">Save & test connection</button>
+      <button class="btn ghost" style="margin-top:10px" onclick="clearSync()">Disconnect</button>
+      <div id="syncMsg" style="margin-top:14px;font-size:13.5px;text-align:center"></div>
+    </div>`);
+}
+async function saveSync(){
+  state.settings.supabaseUrl=$("#sb-url").value.trim().replace(/\/$/,"");
+  state.settings.supabaseKey=$("#sb-key").value.trim();
+  save(); ui.sb=null;
+  const msg=$("#syncMsg"); msg.innerHTML='<span style="color:var(--text-2)">Testing…</span>';
+  try{
+    const sb=await ensureSupabase();
+    if(!sb){ msg.innerHTML='<span style="color:var(--hi)">Enter both URL and key.</span>'; return; }
+    const {error}=await sb.from("tasks").select("id").limit(1);
+    if(error) throw error;
+    msg.innerHTML='<span style="color:var(--green);font-weight:700">✓ Connected! Syncing…</span>';
+    await doSync(true);
+    setTimeout(()=>{closeSheet();render();},900);
+  }catch(e){
+    msg.innerHTML=`<span style="color:var(--hi)">✕ ${esc(e.message||"Connection failed")}.<br>Check keys & that tables exist.</span>`;
+  }
+}
+function clearSync(){
+  state.settings.supabaseUrl=""; state.settings.supabaseKey=""; ui.sb=null; save();
+  closeSheet(); render(); toast("Disconnected from cloud");
+}
+async function pushTask(t){ pushRow("tasks",t); }
+async function pushTaskDelete(t){ pushRow("tasks",t,true); }
+async function pushRow(table,obj,deleted){
+  if(!state.settings.supabaseUrl) return;
+  try{
+    const sb=await ensureSupabase(); if(!sb) return;
+    await sb.from(table).upsert({id:obj.id,payload:obj,updated_at:new Date().toISOString(),deleted:!!deleted});
+  }catch(e){ /* offline — will resync later */ }
+}
+async function doSync(silent){
+  if(!state.settings.supabaseUrl){ if(!silent){toast("Set up cloud sync first");openSyncSheet();} return; }
+  if(ui.syncing) return; ui.syncing=true;
+  if(!silent) toast("Syncing…");
+  try{
+    const sb=await ensureSupabase(); if(!sb) throw new Error("no client");
+    // PUSH local
+    const taskRows=state.tasks.map(t=>({id:t.id,payload:t,updated_at:t.updatedAt||nowISO(),deleted:false}));
+    if(taskRows.length) await sb.from("tasks").upsert(taskRows);
+    const memRows=state.members.map(m=>({id:m.id,payload:m,updated_at:nowISO(),deleted:false}));
+    await sb.from("members").upsert(memRows);
+    // PULL remote
+    const {data:rTasks}=await sb.from("tasks").select("*");
+    const {data:rMembers}=await sb.from("members").select("*");
+    if(rTasks){
+      const map={}; state.tasks.forEach(t=>map[t.id]=t);
+      rTasks.forEach(r=>{
+        if(r.deleted){ delete map[r.id]; return; }
+        const local=map[r.id];
+        if(!local || new Date(r.updated_at) > new Date(local.updatedAt||0)) map[r.id]=r.payload;
+      });
+      state.tasks=Object.values(map);
+    }
+    if(rMembers){
+      const map={}; state.members.forEach(m=>map[m.id]=m);
+      rMembers.forEach(r=>{ if(!r.deleted) map[r.id]=r.payload; });
+      state.members=Object.values(map);
+      if(!state.members.find(m=>m.isMe)) state.members.unshift({...ME});
+    }
+    save(); ui.lastSync=nowISO(); render();
+    if(!silent) toast("✓ Synced across devices");
+  }catch(e){
+    if(!silent) toast("Sync failed — check connection");
+    console.warn("sync error",e);
+  }finally{ ui.syncing=false; }
+}
+
+/* ---------- Backup / restore ---------- */
+function exportBackup(){
+  const blob=new Blob([JSON.stringify(state,null,2)],{type:"application/json"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="gsd-backup-"+todayStr()+".json"; a.click();
+  URL.revokeObjectURL(a.href); toast("Backup downloaded");
+}
+function restoreBackup(file){
+  const r=new FileReader();
+  r.onload=()=>{
+    try{
+      const p=JSON.parse(r.result);
+      if(!p.tasks) throw new Error("bad file");
+      if(!confirm("Restore will replace current tasks & members with the backup. Continue?")) return;
+      state.tasks=p.tasks||[]; state.members=p.members||SEED_MEMBERS.map(m=>({...m}));
+      if(p.settings){ state.settings={...state.settings,...p.settings}; }
+      if(!state.members.find(m=>m.isMe)) state.members.unshift({...ME});
+      save(); applyTheme(); render(); toast("✓ Backup restored");
+    }catch(e){ toast("Invalid backup file"); }
+  };
+  r.readAsText(file);
+}
+
+/* ============================================================
+   NAV / EVENTS
+   ============================================================ */
+function go(view){ ui.view=view; ui.search=""; const si=$("#searchInput"); if(si)si.value=""; render(); if(["all","today","overdue"].includes(view)) renderChips(); window.scrollTo(0,0); }
+
+document.querySelectorAll(".nav-item").forEach(n=>n.onclick=()=>go(n.dataset.view));
+$("#themeBtn").onclick=toggleTheme;
+$("#focusBtn").onclick=openFocus;
+$("#searchInput").addEventListener("input",e=>{ui.search=e.target.value;const c=$("#content");c.innerHTML="";c.appendChild(renderList());});
+$("#scrim").onclick=closeSheet;
+
+/* FAB: tap = new task, long-press = quick capture */
+let pressT, longPressed=false;
+const fab=$("#fab");
+function fabDown(){ longPressed=false; pressT=setTimeout(()=>{longPressed=true;navigator.vibrate&&navigator.vibrate(15);openQuickCapture();},450); }
+function fabUp(){ clearTimeout(pressT); if(!longPressed) openEditor(null); }
+fab.addEventListener("touchstart",e=>{e.preventDefault();fabDown();},{passive:false});
+fab.addEventListener("touchend",e=>{e.preventDefault();fabUp();},{passive:false});
+fab.addEventListener("mousedown",fabDown);
+fab.addEventListener("mouseup",fabUp);
+fab.addEventListener("mouseleave",()=>clearTimeout(pressT));
+// show hint occasionally
+setTimeout(()=>{const h=$("#fabHint");h.classList.add("show");setTimeout(()=>h.classList.remove("show"),3000);},1400);
+
+$("#restoreFile") || (()=>{const f=el("input");f.type="file";f.accept="application/json";f.id="restoreFile";f.style.display="none";f.onchange=e=>{if(e.target.files[0])restoreBackup(e.target.files[0]);e.target.value="";};document.body.appendChild(f);})();
+
+/* ============================================================
+   PWA — manifest + service worker (single-file, generated at runtime)
+   ============================================================ */
+function makeIcon(size){
+  const c=document.createElement("canvas"); c.width=c.height=size;
+  const x=c.getContext("2d");
+  x.fillStyle="#7EBA28"; // brand green
+  const r=size*0.22; // rounded square
+  x.beginPath();
+  x.moveTo(r,0);x.arcTo(size,0,size,size,r);x.arcTo(size,size,0,size,r);
+  x.arcTo(0,size,0,0,r);x.arcTo(0,0,size,0,r);x.closePath();x.fill();
+  x.fillStyle="#fff"; x.font=`800 ${size*0.34}px -apple-system,Helvetica,Arial,sans-serif`;
+  x.textAlign="center"; x.textBaseline="middle";
+  x.fillText("GSD",size/2,size*0.54);
+  return c.toDataURL("image/png");
+}
+function setupPWA(){
+  try{
+    const icon192=makeIcon(192), icon512=makeIcon(512);
+    const manifest={
+      name:"GSD — Get Stuff Done", short_name:"GSD", start_url:".", scope:".",
+      display:"standalone", background_color:"#f4f5f2", theme_color:"#7EBA28",
+      description:"Personal task manager for the Wilsons sales team.",
+      icons:[
+        {src:icon192,sizes:"192x192",type:"image/png",purpose:"any maskable"},
+        {src:icon512,sizes:"512x512",type:"image/png",purpose:"any maskable"}
+      ]
+    };
+    const mBlob=new Blob([JSON.stringify(manifest)],{type:"application/manifest+json"});
+    let link=document.querySelector('link[rel=manifest]');
+    if(!link){link=document.createElement("link");link.rel="manifest";document.head.appendChild(link);}
+    link.href=URL.createObjectURL(mBlob);
+    // apple touch icon
+    let ai=document.createElement("link");ai.rel="apple-touch-icon";ai.href=icon192;document.head.appendChild(ai);
+    // service worker (caches this page for offline)
+    if("serviceWorker" in navigator){
+      const swCode=`
+        const C="gsd-v1";
+        self.addEventListener("install",e=>self.skipWaiting());
+        self.addEventListener("activate",e=>e.waitUntil(self.clients.claim()));
+        self.addEventListener("fetch",e=>{
+          if(e.request.method!=="GET")return;
+          e.respondWith(
+            caches.open(C).then(c=>c.match(e.request).then(r=>{
+              const f=fetch(e.request).then(res=>{try{c.put(e.request,res.clone())}catch(_){}return res}).catch(()=>r);
+              return r||f;
+            }))
+          );
+        });`;
+      const swBlob=new Blob([swCode],{type:"text/javascript"});
+      navigator.serviceWorker.register(URL.createObjectURL(swBlob)).catch(()=>{});
+    }
+  }catch(e){ console.warn("PWA setup skipped",e); }
+}
+
+/* ============================================================
+   BOOT
+   ============================================================ */
+function boot(){
+  load(); applyTheme(); renderChips(); render(); setupPWA();
+  // auto-sync on load if configured
+  if(state.settings.supabaseUrl) setTimeout(()=>doSync(true),600);
+  // periodic re-render for briefing/time-sensitive
+  setInterval(()=>{ if(["all","today","overdue"].includes(ui.view)) updateBadges(); },60000);
+}
+boot();
+// expose handlers used in inline onclick
+Object.assign(window,{toggleDone,openEditor,saveEditor,confirmDelete,openDetail,openEmailSheet,sendEmail,
+  openSyncSheet,saveSync,clearSync,doSync,exportBackup,openFocus,startFocus,closeSheet,closeMilestone,
+  toggleTheme,dismissBriefing,openMemberSheet,saveQuick,openQuickCapture});
+</script>
+</body>
+</html>
