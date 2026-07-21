@@ -1,2 +1,0 @@
-# gsd
-GSD Wilsons App
