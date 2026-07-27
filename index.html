@@ -642,7 +642,7 @@ input.detail-title:focus{border-bottom:2px solid var(--green);margin-bottom:12px
 
 /* ---------- Constants / seed data ---------- */
 const CONTEXTS = ["Sales","Operations","Admin","Personal","Finance","Marketing"];
-const APP_VERSION = "v1.5.4";
+const APP_VERSION = "v1.6.0";
 const ME = { id:"me-denley", name:"Denley Hopkins", role:"Sales Team Leader", email:"", isMe:true };
 const SEED_MEMBERS = [
   ME,
@@ -2230,70 +2230,64 @@ function addExtracted(){
    OUTLOOK CALENDAR (Microsoft Graph)
    Dormant until a client ID is entered in More → Outlook calendar.
    ============================================================ */
-const MSAL_CDNS=[
-  "https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js",
-  "https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/lib/msal-browser.min.js",
-  "https://unpkg.com/@azure/msal-browser@2.38.3/lib/msal-browser.min.js"
-];
-let _msal=null, _msToken=null, _msTokenExp=0, _msBusy=false, _msDone={};
+/* No external library: OAuth2 authorization-code + PKCE straight to Microsoft */
+const MS_LS="gsd.msauth";
+let _msBusy=false, _msDone={};
 function outlookConfigured(){ return !!(state.settings.msClientId||"").trim(); }
-function loadScript(src){
-  return new Promise((res,rej)=>{
-    const existing=document.querySelector(`script[src="${src}"]`);
-    if(existing){ if(existing.dataset.loaded){ res(); } else { existing.addEventListener("load",()=>res()); existing.addEventListener("error",rej); } return; }
-    const s=document.createElement("script"); s.src=src; s.async=true;
-    s.onload=()=>{ s.dataset.loaded="1"; res(); }; s.onerror=()=>rej(new Error("failed to load "+src));
-    document.head.appendChild(s);
-  });
-}
-async function loadMsal(){
-  if(window.msal) return window.msal;
-  for(const url of MSAL_CDNS){
-    try{
-      await loadScript(url);
-      for(let i=0;i<25 && !window.msal;i++) await new Promise(r=>setTimeout(r,80));
-      if(window.msal) return window.msal;
-    }catch(e){ /* try the next CDN */ }
-  }
-  throw new Error("Microsoft sign-in library couldn't load \u2014 check the network or any web filtering");
-}
-async function msalApp(){
-  if(_msal) return _msal;
-  const M=await loadMsal();
-  _msal=new M.PublicClientApplication({
-    auth:{ clientId:state.settings.msClientId.trim(),
-           authority:"https://login.microsoftonline.com/"+((state.settings.msTenant||"common").trim()||"common"),
-           redirectUri:location.origin+location.pathname },
-    cache:{ cacheLocation:"localStorage" }
-  });
-  if(_msal.initialize) await _msal.initialize();
-  return _msal;
-}
-async function msToken(interactive){
-  if(_msToken && Date.now()<_msTokenExp-60000) return _msToken;
-  const app=await msalApp(); const scopes=["Calendars.Read"];
-  let acc=app.getAllAccounts()[0];
-  try{
-    if(!acc){ if(!interactive) return null; const r=await app.loginPopup({scopes}); acc=r.account; }
-    const r=await app.acquireTokenSilent({scopes,account:acc});
-    _msToken=r.accessToken; _msTokenExp=new Date(r.expiresOn).getTime(); return _msToken;
-  }catch(err){
-    if(!interactive) return null;
-    const r=await app.loginPopup({scopes});
-    _msToken=r.accessToken; _msTokenExp=new Date(r.expiresOn).getTime(); return _msToken;
-  }
-}
+function msAuthority(){ return "https://login.microsoftonline.com/"+((state.settings.msTenant||"common").trim()||"common"); }
+function msRedirect(){ return location.origin+location.pathname; }
+function msStore(v){ try{ v?localStorage.setItem(MS_LS,JSON.stringify(v)):localStorage.removeItem(MS_LS); }catch(e){} }
+function msRead(){ try{ return JSON.parse(localStorage.getItem(MS_LS)||"null"); }catch(e){ return null; } }
+function b64url(buf){ return btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,""); }
+function randStr(n){ const a=new Uint8Array(n); crypto.getRandomValues(a); return b64url(a.buffer).slice(0,n); }
+async function pkceChallenge(v){ return b64url(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(v))); }
 async function outlookConnect(){
   if(!outlookConfigured()){ toast("Add your client ID first"); return; }
   try{
-    const tok=await msToken(true);
-    if(!tok){ toast("Sign-in cancelled"); return; }
-    state.settings.msConnected=true; save(); closeSheet(); render(); toast("Outlook calendar connected");
-    _msDone={}; outlookSync(ui.ts.d||todayStr());
-  }catch(e){ toast("Couldn't connect: "+(e.message||e)); }
+    const verifier=randStr(64), state_=randStr(16);
+    sessionStorage.setItem("gsd.pkce",JSON.stringify({verifier,state:state_}));
+    const p=new URLSearchParams({
+      client_id:state.settings.msClientId.trim(), response_type:"code", redirect_uri:msRedirect(),
+      response_mode:"query", scope:"Calendars.Read offline_access", state:state_,
+      code_challenge:await pkceChallenge(verifier), code_challenge_method:"S256"
+    });
+    location.href=msAuthority()+"/oauth2/v2.0/authorize?"+p.toString();
+  }catch(e){ toast("Couldn't start sign-in: "+(e.message||e)); }
+}
+async function msHandleRedirect(){
+  const q=new URLSearchParams(location.search);
+  const code=q.get("code"), st=q.get("state"), err=q.get("error");
+  if(!code && !err) return;
+  const clean=()=>history.replaceState({},"",location.pathname);
+  if(err){ clean(); toast("Microsoft sign-in failed: "+(q.get("error_description")||err).slice(0,90)); return; }
+  let pk=null; try{ pk=JSON.parse(sessionStorage.getItem("gsd.pkce")||"null"); }catch(e){}
+  sessionStorage.removeItem("gsd.pkce");
+  clean();
+  if(!pk || pk.state!==st){ toast("Sign-in didn't match this device \u2014 try again"); return; }
+  try{
+    const tok=await msExchange({ grant_type:"authorization_code", code, redirect_uri:msRedirect(), code_verifier:pk.verifier });
+    if(tok){ state.settings.msConnected=true; save(); render(); toast("Outlook calendar connected"); outlookSync(ui.ts.d||todayStr()); }
+  }catch(e){ toast("Couldn't finish sign-in: "+(e.message||e)); }
+}
+async function msExchange(extra){
+  const body=new URLSearchParams(Object.assign({ client_id:state.settings.msClientId.trim(), scope:"Calendars.Read offline_access" },extra));
+  const r=await fetch(msAuthority()+"/oauth2/v2.0/token",{ method:"POST", headers:{"Content-Type":"application/x-www-form-urlencoded"}, body });
+  const j=await r.json();
+  if(!r.ok) throw new Error(j.error_description||j.error||("token "+r.status));
+  msStore({ at:j.access_token, exp:Date.now()+(j.expires_in||3600)*1000, rt:j.refresh_token||(msRead()||{}).rt });
+  return j.access_token;
+}
+async function msToken(){
+  const s=msRead();
+  if(s && s.at && Date.now()<s.exp-60000) return s.at;
+  if(s && s.rt){
+    try{ return await msExchange({ grant_type:"refresh_token", refresh_token:s.rt }); }
+    catch(e){ msStore(null); state.settings.msConnected=false; save(); return null; }
+  }
+  return null;
 }
 function outlookDisconnect(){
-  state.settings.msConnected=false; _msToken=null; _msal=null; _msDone={}; save(); closeSheet(); render(); toast("Outlook disconnected");
+  msStore(null); state.settings.msConnected=false; _msDone={}; save(); closeSheet(); render(); toast("Outlook disconnected");
 }
 /* Slot index for a Date (may be negative or beyond TS_SLOTS — the sheet widens) */
 function slotOfDate(d){ return Math.floor(((d.getHours()-TS_START)*60+d.getMinutes())/15); }
@@ -2307,7 +2301,7 @@ async function outlookSync(date){
   if(_msDone[date] && Date.now()-_msDone[date]<120000) return;
   _msBusy=true;
   try{
-    const tok=await msToken(false); if(!tok){ _msBusy=false; return; }
+    const tok=await msToken(); if(!tok){ _msBusy=false; return; }
     const start=new Date(date+"T00:00:00"), end=new Date(date+"T23:59:59");
     const url=`https://graph.microsoft.com/v1.0/me/calendarview?startDateTime=${start.toISOString()}&endDateTime=${end.toISOString()}&$top=100&$select=subject,start,end,isAllDay,attendees,organizer,responseStatus,isOrganizer`;
     const r=await fetch(url,{headers:{Authorization:"Bearer "+tok,Prefer:'outlook.timezone="Europe/London"'}});
@@ -2354,7 +2348,7 @@ function openOutlookSettings(){
 function saveOutlookCfg(){
   state.settings.msClientId=$("#msClient").value.trim();
   state.settings.msTenant=$("#msTenant").value.trim()||"common";
-  _msal=null; _msToken=null; save(); openOutlookSettings(); toast("Saved");
+  msStore(null); save(); openOutlookSettings(); toast("Saved");
 }
 
 /* ============================================================
@@ -2792,6 +2786,7 @@ function setupPWA(){
    ============================================================ */
 function boot(){
   load(); applyTheme(); renderChips(); render(); setupPWA();
+  msHandleRedirect();
   // auto-sync on load if configured
   if(state.settings.supabaseUrl) setTimeout(startAutoSync,600);
   // periodic re-render for briefing/time-sensitive
