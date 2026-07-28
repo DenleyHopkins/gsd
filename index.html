@@ -84,6 +84,17 @@ input,select,textarea{font-family:inherit;font-size:16px;color:var(--text)}
 .search svg{width:18px;height:18px;color:var(--text-3);flex-shrink:0}
 .search input{border:none;background:none;outline:none;width:100%;font-size:15px}
 .chips{display:flex;flex-wrap:wrap;gap:6px;padding:8px 18px 4px}
+.st-pie-wrap{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.st-pie{position:relative;width:150px;height:150px;flex:0 0 auto}
+.st-pie svg{width:150px;height:150px}
+.st-pie-mid{position:absolute;inset:0;display:grid;place-items:center;align-content:center;pointer-events:none}
+.st-pie-mid b{font-size:20px;font-weight:800;line-height:1.1}
+.st-pie-mid span{font-size:11px;color:var(--text-3);font-weight:600}
+.st-legend{flex:1;min-width:190px;display:flex;flex-direction:column;gap:7px}
+.st-leg{display:flex;align-items:center;gap:8px;font-size:12.5px}
+.st-leg i{width:10px;height:10px;border-radius:3px;flex:0 0 auto}
+.st-leg .n{flex:1;font-weight:600;color:var(--text-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.st-leg .v{color:var(--text-3);font-weight:700;white-space:nowrap}
 #listControls.collapsed .chips{display:none!important}
 .filtbtn{display:flex;align-items:center;gap:6px;background:var(--surface);box-shadow:var(--shadow);
   border-radius:14px;padding:10px 13px;font-size:13px;font-weight:700;color:var(--text-2);white-space:nowrap}
@@ -654,7 +665,7 @@ input.detail-title:focus{border-bottom:2px solid var(--green);margin-bottom:12px
 
 /* ---------- Constants / seed data ---------- */
 const CONTEXTS = ["Sales","Operations","Admin","Personal","Finance","Marketing"];
-const APP_VERSION = "v1.8.2";
+const APP_VERSION = "v1.9.4";
 const ME = { id:"me-denley", name:"Denley Hopkins", role:"Sales Team Leader", email:"", isMe:true };
 const SEED_MEMBERS = [
   ME,
@@ -2599,11 +2610,7 @@ function outlookDisconnect(){
 }
 /* Slot index for a Date (may be negative or beyond TS_SLOTS — the sheet widens) */
 function slotOfDate(d){ return Math.floor(((d.getHours()-TS_START)*60+d.getMinutes())/15); }
-function eventCategory(ev){
-  const people=[...(ev.attendees||[]).map(a=>(a.emailAddress||{}).address||""),((ev.organizer||{}).emailAddress||{}).address||""];
-  const external=people.some(a=>a && !a.toLowerCase().endsWith("@"+WORK_DOMAIN));
-  return external ? "F2F Sales Calls" : "Meeting / Team Discussion";
-}
+function eventCategory(ev){ return "Meeting / Team Discussion"; }
 async function outlookSync(date){
   if(!outlookConfigured()||!state.settings.msConnected||_msBusy) return;
   if(_msDone[date] && Date.now()-_msDone[date]<120000) return;
@@ -2622,13 +2629,12 @@ async function outlookSync(date){
       if(!(ev.isOrganizer||resp==="accepted"||resp==="organizer")) return;
       const s=graphLocal(ev.start.dateTime), e=graphLocal(ev.end.dateTime);
       const sl=slotOfDate(s), el=Math.max(sl+1,slotOfDate(new Date(e.getTime()-1))+1);
-      const cat=eventCategory(ev), finished=e.getTime()<now;
+      const cat=eventCategory(ev);
       for(let x=sl;x<el;x++){
         const {k,e:entry}=tsEnsure(date,x);
         let changed=false;
-        if(!entry.plan){ entry.plan=ev.subject||"Meeting"; changed=true; }
-        if(finished && !entry.actual){ entry.actual=ev.subject||"Meeting"; changed=true; }
-        if(!entry.cats||!entry.cats.length){ entry.cats=[cat]; changed=true; }
+        if(!entry.plan && !entry.planCleared){ entry.plan=ev.subject||"Meeting"; changed=true; }
+        if(entry.calCat!==cat){ entry.calCat=cat; changed=true; }   // remembered, not applied
         if(changed){ entry.source="outlook"; state.timesheet[k]=entry; tsSave(entry); touched++; }
       }
     });
@@ -2642,7 +2648,7 @@ function openOutlookSettings(){
   openSheet(`
     <div class="sheet-hd"><h2>Outlook calendar</h2><button class="sheet-close" onclick="closeSheet()">${X}</button></div>
     <div class="sheet-body">
-      <p style="color:var(--text-2);font-size:13.5px;margin:0 2px 14px;line-height:1.55">Accepted meetings fill the Plan column, and the Actual column once they've finished. Your own entries are never overwritten. Each person connects their own account.</p>
+      <p style="color:var(--text-2);font-size:13.5px;margin:0 2px 14px;line-height:1.55">Accepted meetings fill the Plan column only — Actual is always yours to write. Your own entries are never overwritten. Categories are never applied automatically — tag a slot yourself, or type something like "mtg" in Actual and the meeting category is suggested. Each person connects their own account.</p>
       <div class="field"><label>Application (client) ID</label><input type="text" id="msClient" value="${esc(s.msClientId||"")}" placeholder="from your IT team"></div>
       <div class="field"><label>Directory (tenant) ID</label><input type="text" id="msTenant" value="${esc(s.msTenant||"common")}" placeholder="common"></div>
       <button class="btn ghost" onclick="saveOutlookCfg()">Save details</button>
@@ -2704,14 +2710,43 @@ function tsEnsure(date,slot){
 }
 function tsSave(e){
   e.updatedAt=nowISO();
-  const empty=!e.plan && !e.actual && !e.planTaskId && !(e.cats&&e.cats.length) && !e.hp;
+  const empty=!e.plan && !e.actual && !e.planTaskId && !(e.cats&&e.cats.length) && !e.hp
+    && !e.planCleared && !e.actualCleared;
   if(empty) delete state.timesheet[e.id]; else state.timesheet[e.id]=e;
   save(); pushRow("timesheet",e,empty);
 }
+const MTG_RE=/\b(mtg|mtgs|mtng|meet|meets|meeting|meetings|meetng|meetin|catch[- ]?up|1[-: ]?2[-: ]?1|one[- ]?to[- ]?one|appt|appointment|visit|site visit|review|workshop|briefing|huddle)\b/i;
+function looksLikeMeeting(txt){ return MTG_RE.test(txt||""); }
 function tsText(date,slot,field,val){
   const {e}=tsEnsure(date,slot); e[field]=val;
   if(field==="plan") e.planTaskId=null;
+  // remember a deliberate wipe so Outlook doesn't put it straight back
+  if(field==="plan"||field==="actual"){
+    const flag=field+"Cleared";
+    if(!(val||"").trim()) e[flag]=true; else delete e[flag];
+  }
+  if(field==="actual"){
+    const auto=e.autoCat;
+    if(looksLikeMeeting(val)){
+      if(!e.cats||!e.cats.length){
+        const cat=e.calCat||"Meeting / Team Discussion";
+        e.cats=[cat]; e.autoCat=cat; tsPaintCats(e);
+      }
+    } else if(auto && (e.cats||[]).length===1 && e.cats[0]===auto){
+      e.cats=[]; delete e.autoCat; tsPaintCats(e);   // word removed — take the auto tag back off
+    }
+  }
   tsSave(e);
+}
+/* keep the open block editor's chips in step with an auto tag */
+function tsPaintCats(e){
+  const on=new Set(e.cats||[]);
+  document.querySelectorAll(".catgrid .catchip").forEach(b=>{
+    const c=b.dataset.c, col=TS_COLOR[c]||"#999";
+    if(on.has(c)){ b.classList.add("on"); b.style.background=col; b.style.borderColor=col; }
+    else { b.classList.remove("on"); b.style.background=""; b.style.borderColor=""; }
+  });
+  const cl=$("#tsClearCats"); if(cl) cl.style.display=(e.cats||[]).length?"":"none";
 }
 
 /* ---- filter + shell ---- */
@@ -2829,7 +2864,14 @@ function openTSBlock(date,slot){
       <div class="field"><label>Actual</label>
         <input type="text" list="tsRecent" value="${esc(e.actual||'')}" placeholder="What actually happened" oninput="tsText('${date}',${slot},'actual',this.value)">
       </div>
-      <div class="field"><label>Categories (tag one or more)</label><div class="catgrid">${chips}</div></div>
+      <div class="field">
+        <label style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+          <span>Categories (tag one or more)</span>
+          <button id="tsClearCats" onclick="tsClearCats('${date}',${slot})"
+            style="${(e.cats||[]).length?'':'display:none;'}background:none;border:none;padding:0;font-size:12px;font-weight:800;color:var(--hi);cursor:pointer;text-transform:none;letter-spacing:0">Clear</button>
+        </label>
+        <div class="catgrid">${chips}</div>
+      </div>
       <div class="field"><label>Payoff</label>
         <div class="hpseg">
           <button class="${e.hp==='HP'?'on-HP':''}" onclick="tsSetHP('${date}',${slot},'HP')">High payoff</button>
@@ -2841,11 +2883,20 @@ function openTSBlock(date,slot){
       <button class="btn" onclick="closeSheet()">Done</button>
     </div>`);
 }
+function tsClearCats(date,slot){
+  const {e}=tsEnsure(date,slot);
+  e.cats=[]; delete e.autoCat; tsSave(e);
+  document.querySelectorAll(".catgrid .catchip").forEach(b=>{ b.classList.remove("on"); b.style.background=""; b.style.borderColor=""; });
+  const cl=$("#tsClearCats"); if(cl) cl.style.display="none";
+  toast("Categories cleared");
+}
 function tsToggleCat(date,slot,cat,btn){
   const {e}=tsEnsure(date,slot); e.cats=e.cats||[];
   const i=e.cats.indexOf(cat); const col=TS_COLOR[cat]||"#999";
   if(i>=0){ e.cats.splice(i,1); btn.classList.remove("on"); btn.style.background=""; btn.style.borderColor=""; }
   else { e.cats.push(cat); btn.classList.add("on"); btn.style.background=col; btn.style.borderColor=col; }
+  delete e.autoCat;
+  const cl=$("#tsClearCats"); if(cl) cl.style.display=e.cats.length?"":"none";
   tsSave(e);
 }
 function tsSetHP(date,slot,v){
@@ -2924,13 +2975,25 @@ function tsStatsHTML(){
       <span><i style="background:var(--hi)"></i>Low payoff · ${A.lp.toFixed(2)}h</span>
     </div></div>`;
 
-  // Category breakdown (horizontal bars, readable)
-  const maxCat=catRows.length?catRows[0][1]:1;
+  // Category breakdown (donut + legend)
+  const R=54, C=2*Math.PI*R; let acc=0;
+  const arcs=catTotal?catRows.map(([c,hh])=>{
+    const frac=hh/catTotal, dash=frac*C, off=-acc*C; acc+=frac;
+    return `<circle cx="70" cy="70" r="${R}" fill="none" stroke="${TS_COLOR[c]}" stroke-width="26"
+      stroke-dasharray="${dash.toFixed(2)} ${(C-dash).toFixed(2)}" stroke-dashoffset="${off.toFixed(2)}"><title>${esc(c)} · ${hh.toFixed(2)}h</title></circle>`;
+  }).join(""):`<circle cx="70" cy="70" r="${R}" fill="none" stroke="var(--line)" stroke-width="26"></circle>`;
   const catCard=`<div class="st-card"><h3>${esc(periodLabel)} · Category breakdown</h3>
-    ${catRows.map(([c,h])=>{ const pct=catTotal?Math.round(h/catTotal*100):0; return `<div class="st-bar">
-      <div class="lab"><span>${esc(c)}</span><span class="v">${h.toFixed(2)}h · ${pct}%</span></div>
-      <div class="st-track"><i style="width:${Math.max(3,h/maxCat*100)}%;background:${TS_COLOR[c]}"></i></div>
-    </div>`; }).join("")}
+    <div class="st-pie-wrap">
+      <div class="st-pie">
+        <svg viewBox="0 0 140 140" style="transform:rotate(-90deg);overflow:visible">${arcs}</svg>
+        <div class="st-pie-mid"><b>${catTotal.toFixed(1)}h</b><span>logged</span></div>
+      </div>
+      <div class="st-legend">
+        ${catRows.length?catRows.map(([c,hh])=>{ const pct=catTotal?Math.round(hh/catTotal*100):0;
+          return `<div class="st-leg"><i style="background:${TS_COLOR[c]}"></i><span class="n">${esc(c)}</span><span class="v">${pct}% · ${hh.toFixed(2)}h</span></div>`;
+        }).join(""):'<div style="color:var(--text-3);font-size:13px">Nothing categorised yet</div>'}
+      </div>
+    </div>
   </div>`;
 
   // Per-week stacked
