@@ -643,7 +643,7 @@ input.detail-title:focus{border-bottom:2px solid var(--green);margin-bottom:12px
 
 /* ---------- Constants / seed data ---------- */
 const CONTEXTS = ["Sales","Operations","Admin","Personal","Finance","Marketing"];
-const APP_VERSION = "v1.7.2";
+const APP_VERSION = "v1.7.3";
 const ME = { id:"me-denley", name:"Denley Hopkins", role:"Sales Team Leader", email:"", isMe:true };
 const SEED_MEMBERS = [
   ME,
@@ -750,13 +750,30 @@ function openRockPicker(){
   const open=state.tasks.filter(t=>t.assignee===me && t.status!=="done")
     .sort((a,b)=>{const ao=isOverdue(a),bo=isOverdue(b);if(ao!==bo)return ao?-1:1;const p={High:0,Normal:1,Low:2};if(p[a.priority]!==p[b.priority])return p[a.priority]-p[b.priority];return 0;});
   const rows=open.length?open.map(t=>`<button class="ti" onclick="setRock('${t.id}')"><span class="dot" style="background:${t.priority==='High'?'var(--hi)':t.priority==='Low'?'var(--lo)':'var(--mid)'}"></span><span class="tt">${esc(t.title)}</span><span class="cx">${t.context}</span></button>`).join("")
-    : `<p style="color:var(--text-3);font-size:13.5px;text-align:center;padding:18px">No open tasks yet. Add one with the + button, then set it as your Rock.</p>`;
+    : `<p style="color:var(--text-3);font-size:13.5px;text-align:center;padding:14px 18px">No other open tasks — write your Rock above.</p>`;
   openSheet(`
     <div class="sheet-hd"><h2>Daily Rock</h2><button class="sheet-close" onclick="closeSheet()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>
     <div class="sheet-body">
       <p style="color:var(--text-2);font-size:13.5px;margin:0 2px 14px;line-height:1.55">Pick the one thing that matters most today. It sits at the top of your Today tab for focus.</p>
+      <div class="field" style="margin-bottom:10px"><label>Write today's Rock</label>
+        <input type="text" id="rockNew" placeholder="The one big thing to get done today" autocomplete="off" onkeydown="if(event.key==='Enter')addRockTask()">
+      </div>
+      <button class="btn" onclick="addRockTask()">Add &amp; set as today's Rock</button>
+      <div style="display:flex;align-items:center;gap:10px;margin:18px 2px 12px;color:var(--text-3);font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase">
+        <span style="flex:1;height:1px;background:var(--line)"></span>or pick an existing task<span style="flex:1;height:1px;background:var(--line)"></span>
+      </div>
       <div class="tasklist">${rows}</div>
     </div>`);
+  setTimeout(()=>{const i=$("#rockNew"); if(i) i.focus();},120);
+}
+function addRockTask(){
+  const inp=$("#rockNew"); if(!inp) return;
+  const title=(inp.value||"").trim(); if(!title){ inp.focus(); return; }
+  const t=newTask({ title, dueDate:todayStr(), assignee:myId(), rock:todayStr(),
+    context:(ui.ctx&&ui.ctx!=="All")?ui.ctx:"Sales" });
+  const me=t.assignee, d=todayStr();
+  state.tasks.forEach(x=>{ if(x.assignee===me && x.rock===d){ x.rock=""; upsertTask(x); } });
+  upsertTask(t); closeSheet(); render(); toast("\u26f0 Daily Rock set");
 }
 /* ---------- Recurrence helpers ---------- */
 const WD=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
@@ -1080,7 +1097,9 @@ function rockCard(t){
     <div class="rk-meta">
       <div class="rk-check" data-rk="${t.id}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><path d="M20 6L9 17l-5-5"/></svg></div>
       <span style="font-size:12.5px;opacity:.85;font-weight:600">${done?"Done — nice work":"Tap to open · check to complete"}</span>
+      <button data-swap="1" style="margin-left:auto;font-size:12px;font-weight:700;color:#fff;background:rgba(255,255,255,.14);border:none;padding:6px 11px;border-radius:9px">Change</button>
     </div>`;
+  c.querySelector("[data-swap]").onclick=e=>{e.stopPropagation();openRockPicker();};
   c.querySelector("[data-rk]").onclick=e=>{e.stopPropagation();bump(e.currentTarget);toggleDone(t.id);};
   c.onclick=()=>openDetail(t.id);
   return c;
