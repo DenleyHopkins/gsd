@@ -621,6 +621,7 @@ input.detail-title:focus{border-bottom:2px solid var(--green);margin-bottom:12px
   <button class="nav-item" data-view="more">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/><circle cx="5" cy="12" r="1.5"/></svg>
     <span>More</span>
+    <span class="badge" id="moreBadge" style="display:none">0</span>
   </button>
 </nav>
 
@@ -642,7 +643,7 @@ input.detail-title:focus{border-bottom:2px solid var(--green);margin-bottom:12px
 
 /* ---------- Constants / seed data ---------- */
 const CONTEXTS = ["Sales","Operations","Admin","Personal","Finance","Marketing"];
-const APP_VERSION = "v1.6.0";
+const APP_VERSION = "v1.7.0";
 const ME = { id:"me-denley", name:"Denley Hopkins", role:"Sales Team Leader", email:"", isMe:true };
 const SEED_MEMBERS = [
   ME,
@@ -674,6 +675,7 @@ let state = {
   tasks: [],
   members: [],
   timesheet: {},
+  ideas: [],
   settings: {
     theme:"light", supabaseUrl:"", supabaseKey:"",
     milestonesSeen:[], briefingDismissed:"", focusDuration:25, currentUserId:"me-denley",
@@ -782,7 +784,7 @@ function save(){ localStorage.setItem(LS, JSON.stringify(state)); }
 function load(){
   try{
     const raw=localStorage.getItem(LS);
-    if(raw){ const p=JSON.parse(raw); state.tasks=p.tasks||[]; state.members=p.members||[]; state.timesheet=p.timesheet||{}; state.settings={...state.settings,...(p.settings||{})}; }
+    if(raw){ const p=JSON.parse(raw); state.tasks=p.tasks||[]; state.members=p.members||[]; state.timesheet=p.timesheet||{}; state.ideas=p.ideas||[]; state.settings={...state.settings,...(p.settings||{})}; }
   }catch(e){ console.warn("load failed",e); }
   if(!state.members.length) state.members = SEED_MEMBERS.map(m=>({...m}));
   else { // ensure "me" always present & updated
@@ -985,6 +987,8 @@ function updateBadges(){
   const o=vis().filter(isOverdue).length;
   const b=$("#overdueBadge");
   if(o>0){ b.style.display="grid"; b.textContent=o; } else b.style.display="none";
+  const n=newIdeas().length, mb=$("#moreBadge");
+  if(mb){ if(n>0){ mb.style.display="grid"; mb.textContent=n; } else mb.style.display="none"; }
 }
 
 /* ---------- Chips ---------- */
@@ -1554,6 +1558,20 @@ function renderMore(){
     </div>
   </div>
 
+  <div class="section-h"><h2>Improve GSD</h2></div>
+  <div class="list-card">
+    <div class="list-row" onclick="openIdeaSheet()">
+      <div class="lic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/></svg></div>
+      <div class="lt"><div class="t">Suggest an improvement</div><div class="s">Anything broken, missing or annoying</div></div>
+      <div class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></div>
+    </div>
+    <div class="list-row" onclick="openIdeasList()">
+      <div class="lic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+      <div class="lt"><div class="t">Suggestion box</div><div class="s">${state.ideas.length?state.ideas.length+" total \u00b7 "+newIdeas().length+" awaiting review":"Nothing submitted yet"}</div></div>
+      ${newIdeas().length?`<span class="sync-status err">${newIdeas().length} new</span>`:'<div class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></div>'}
+    </div>
+  </div>
+
   <div class="section-h"><h2>Milestones</h2></div>
   <div class="list-card"><div class="list-row" style="cursor:default">
     <div class="lic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6M18 9h1.5a2.5 2.5 0 0 0 0-5H18M4 22h16M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22M18 2H6v7a6 6 0 0 0 12 0V2z"/></svg></div>
@@ -1945,6 +1963,7 @@ async function startAutoSync(){
       .on("postgres_changes",{event:"*",schema:"public",table:"tasks"},bump)
       .on("postgres_changes",{event:"*",schema:"public",table:"members"},bump)
       .on("postgres_changes",{event:"*",schema:"public",table:"timesheet"},bump)
+      .on("postgres_changes",{event:"*",schema:"public",table:"ideas"},bump)
       .subscribe();
   }catch(e){ console.warn("realtime setup failed",e); }
   // sync the moment the tab/app regains focus
@@ -1964,6 +1983,9 @@ function openSyncSheet(){
       <p style="color:var(--text-3);font-size:12px;margin:0 2px 16px;line-height:1.5">New: the timesheet needs a <code>timesheet</code> table. In Supabase → SQL editor run:<br><code style="display:block;background:var(--surface-2);padding:8px;border-radius:8px;margin-top:6px;font-size:11px;white-space:pre-wrap">create table if not exists timesheet (id text primary key, payload jsonb, updated_at timestamptz, deleted boolean default false);
 alter table timesheet enable row level security;
 create policy "all" on timesheet for all using (true) with check (true);</code></p>
+      <p style="color:var(--text-3);font-size:12px;margin:0 2px 16px;line-height:1.5">Also new: the suggestion box needs an <code>ideas</code> table. Same SQL editor:<br><code style="display:block;background:var(--surface-2);padding:8px;border-radius:8px;margin-top:6px;font-size:11px;white-space:pre-wrap">create table ideas (id text primary key, payload jsonb, updated_at timestamptz, deleted boolean default false);
+alter table ideas enable row level security;
+create policy "all" on ideas for all using (true) with check (true);</code></p>
       <div class="field"><label>Supabase URL</label><input type="text" id="sb-url" value="${esc(state.settings.supabaseUrl)}" placeholder="https://xxxx.supabase.co" autocomplete="off" autocapitalize="off"></div>
       <div class="field"><label>Anon public key</label><textarea id="sb-key" placeholder="eyJhbGci…" style="min-height:80px;font-size:13px;font-family:monospace">${esc(state.settings.supabaseKey)}</textarea></div>
       <button class="btn" onclick="saveSync()">Save & test connection</button>
@@ -2028,6 +2050,25 @@ async function doSync(silent){
         state.timesheet=map;
       }
     }catch(tsErr){ console.warn("timesheet sync skipped",tsErr&&tsErr.message); }
+    // suggestion box (own try — table may not exist on older setups)
+    try{
+      const before=newIdeas().length;
+      const idRows=(state.ideas||[]).map(i=>({id:i.id,payload:i,updated_at:i.updatedAt||nowISO(),deleted:false}));
+      if(idRows.length) await sb.from("ideas").upsert(idRows);
+      const {data:rIdeas}=await sb.from("ideas").select("*");
+      if(rIdeas){
+        const map={}; (state.ideas||[]).forEach(i=>map[i.id]=i);
+        rIdeas.forEach(r=>{
+          if(r.deleted){ delete map[r.id]; return; }
+          const local=map[r.id];
+          if(!local || new Date(r.updated_at) > new Date(local.updatedAt||0)) map[r.id]=r.payload;
+        });
+        state.ideas=Object.values(map);
+        const after=newIdeas().length;
+        if(after>before && myId()===(state.members.find(m=>m.isMe)||{}).id)
+          setTimeout(()=>toast((after-before)+" new suggestion"+(after-before>1?"s":"")+" to review"),1200);
+      }
+    }catch(idErr){ console.warn("ideas sync skipped",idErr&&idErr.message); }
     // PULL remote
     const {data:rTasks}=await sb.from("tasks").select("*");
     const {data:rMembers}=await sb.from("members").select("*");
@@ -2056,6 +2097,105 @@ async function doSync(silent){
   }finally{ ui.syncing=false; }
 }
 
+/* ============================================================
+   SUGGESTION BOX  (improvements → reviewed by Denley → handed to Claude)
+   ============================================================ */
+const IDEA_AREAS=["Tasks","Timesheet","Team","Daily Rock","Calendar","Sync","Other"];
+function newIdeas(){ return (state.ideas||[]).filter(i=>(i.status||"new")==="new"); }
+
+function openIdeaSheet(){
+  const areas=IDEA_AREAS.map(a=>`<button class="catchip" data-a="${a}" onclick="ideaPickArea(this)"><i style="background:var(--text-3)"></i>${a}</button>`).join("");
+  openSheet(`
+  <div class="sheet-hd"><h2>Suggest an improvement</h2><button class="sheet-close" onclick="closeSheet()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>
+  <div class="sheet-body">
+    <p style="color:var(--text-2);font-size:13.5px;margin:0 2px 16px;line-height:1.55">Say what's annoying, missing or broken — in your own words. It syncs to every device and lands in Denley's review list, then goes to Claude to build.</p>
+    <div class="field"><label>Which part of GSD?</label><div class="catgrid" id="ideaAreas">${areas}</div></div>
+    <div class="field"><label>What would make it better?</label><textarea id="ideaText" style="min-height:120px" placeholder="e.g. When I tick a task off in Today it should ask if it recurs next week"></textarea></div>
+    <button class="btn" onclick="submitIdea()">Submit suggestion</button>
+    <div id="ideaMsg" style="margin-top:10px;font-size:13px"></div>
+  </div>`);
+  setTimeout(()=>{const t=$("#ideaText"); if(t) t.focus();},120);
+}
+function ideaPickArea(btn){
+  document.querySelectorAll("#ideaAreas .catchip").forEach(b=>{ b.classList.remove("on"); b.style.background=""; b.style.borderColor=""; });
+  btn.classList.add("on"); btn.style.background="var(--grey)"; btn.style.borderColor="transparent";
+}
+function submitIdea(){
+  const text=($("#ideaText").value||"").trim();
+  if(!text){ $("#ideaMsg").innerHTML='<span style="color:var(--hi)">Write a line or two first.</span>'; return; }
+  const sel=document.querySelector("#ideaAreas .catchip.on");
+  const meId=myId();
+  const idea={ id:"idea-"+uid(), text, area:sel?sel.dataset.a:"Other", by:meId, byName:(member(meId)||{}).name||"", status:"new", createdAt:nowISO(), updatedAt:nowISO() };
+  state.ideas.push(idea); save(); pushRow("ideas",idea,false);
+  closeSheet(); render(); toast("✓ Sent for review — thank you");
+}
+function openIdeasList(){
+  const list=[...(state.ideas||[])].sort((a,b)=>{
+    const rank=s=>({new:0,reviewed:1,shipped:2})[s||"new"];
+    return rank(a.status)-rank(b.status) || new Date(b.createdAt)-new Date(a.createdAt);
+  });
+  const rows=list.length?list.map(i=>{
+    const st=i.status||"new";
+    const pill=st==="new"?'<span class="sync-status err">New</span>':st==="reviewed"?'<span class="sync-status">Reviewed</span>':'<span class="sync-status ok">Shipped</span>';
+    return `<div style="border:1px solid var(--line);border-radius:14px;padding:13px 14px;margin-bottom:10px;background:var(--surface-2)">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">
+        <span style="font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--text-3)">${esc(i.area||"Other")}</span>
+        <span style="font-size:11.5px;color:var(--text-3)">${esc((i.byName||"").split(" ")[0])} · ${relTime(i.createdAt)}</span>
+        <span style="margin-left:auto">${pill}</span>
+      </div>
+      <div style="font-size:14px;line-height:1.5;white-space:pre-wrap">${esc(i.text)}</div>
+      <div style="display:flex;gap:8px;margin-top:11px;flex-wrap:wrap">
+        ${st!=="reviewed"?`<button class="chip" onclick="ideaStatus('${i.id}','reviewed')">Mark reviewed</button>`:""}
+        ${st!=="shipped"?`<button class="chip" onclick="ideaStatus('${i.id}','shipped')">Shipped</button>`:""}
+        <button class="chip" onclick="ideaToTask('${i.id}')">Make a task</button>
+        <button class="chip" style="margin-left:auto;color:var(--hi)" onclick="deleteIdea('${i.id}')">Delete</button>
+      </div>
+    </div>`;
+  }).join(""):'<p style="color:var(--text-3);font-size:13.5px;margin:2px">No suggestions yet. Anyone on the team can add one from More → Suggest an improvement.</p>';
+  openSheet(`
+  <div class="sheet-hd"><h2>Suggestion box</h2><button class="sheet-close" onclick="closeSheet()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>
+  <div class="sheet-body">
+    ${list.length?`<button class="btn" onclick="copyIdeasForClaude()">Copy ${newIdeas().length||list.length} for Claude</button>
+    <p style="color:var(--text-3);font-size:12px;margin:9px 2px 16px;line-height:1.5">Paste into your Claude chat and it builds them. Unreviewed ones are copied — or all of them if none are new.</p>`:""}
+    ${rows}
+  </div>`);
+}
+function ideaStatus(id,st){
+  const i=(state.ideas||[]).find(x=>x.id===id); if(!i) return;
+  i.status=st; i.updatedAt=nowISO(); save(); pushRow("ideas",i,false);
+  openIdeasList(); render(); toast(st==="shipped"?"Marked shipped":"Marked reviewed");
+}
+function deleteIdea(id){
+  const i=(state.ideas||[]).find(x=>x.id===id); if(!i) return;
+  if(!confirm("Delete this suggestion?")) return;
+  state.ideas=state.ideas.filter(x=>x.id!==id); save(); pushRow("ideas",i,true);
+  openIdeasList(); render();
+}
+function ideaToTask(id){
+  const i=(state.ideas||[]).find(x=>x.id===id); if(!i) return;
+  const meId=myId();
+  const t={ id:"t-"+uid(), title:"GSD: "+i.text.slice(0,90), notes:"From suggestion box — "+(i.byName||"")+"\n\n"+i.text,
+    context:"Admin", assignee:meId, due:"", done:false, priority:"", createdAt:nowISO(), updatedAt:nowISO() };
+  state.tasks.push(t); i.status="reviewed"; i.updatedAt=nowISO();
+  save(); pushRow("tasks",t,false); pushRow("ideas",i,false);
+  closeSheet(); render(); toast("✓ Task created");
+}
+function copyIdeasForClaude(){
+  const pick=newIdeas().length?newIdeas():[...(state.ideas||[])];
+  const txt="GSD improvement requests ("+APP_VERSION+"):\n\n"+pick.map((i,n)=>
+    `${n+1}. [${i.area||"Other"}] ${i.text}\n   — ${i.byName||"team"}, ${new Date(i.createdAt).toLocaleDateString()}`
+  ).join("\n\n");
+  const done=()=>toast("✓ Copied — paste into your Claude chat");
+  if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(done,()=>fallbackCopy(txt,done));
+  else fallbackCopy(txt,done);
+}
+function fallbackCopy(txt,cb){
+  const ta=document.createElement("textarea"); ta.value=txt; ta.style.position="fixed"; ta.style.opacity="0";
+  document.body.appendChild(ta); ta.select();
+  try{ document.execCommand("copy"); cb(); }catch(e){ toast("Copy failed"); }
+  ta.remove();
+}
+
 /* ---------- Backup / restore ---------- */
 function exportBackup(){
   const blob=new Blob([JSON.stringify(state,null,2)],{type:"application/json"});
@@ -2072,6 +2212,7 @@ function restoreBackup(file){
       if(!p.tasks) throw new Error("bad file");
       if(!confirm("Restore will replace current tasks & members with the backup. Continue?")) return;
       state.tasks=p.tasks||[]; state.members=p.members||SEED_MEMBERS.map(m=>({...m}));
+      if(p.ideas) state.ideas=p.ideas;
       if(p.settings){ state.settings={...state.settings,...p.settings}; }
       if(!state.members.find(m=>m.isMe)) state.members.unshift({...ME});
       save(); applyTheme(); render(); toast("✓ Backup restored");
