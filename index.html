@@ -83,8 +83,15 @@ input,select,textarea{font-family:inherit;font-size:16px;color:var(--text)}
   border-radius:14px;padding:10px 14px;box-shadow:var(--shadow)}
 .search svg{width:18px;height:18px;color:var(--text-3);flex-shrink:0}
 .search input{border:none;background:none;outline:none;width:100%;font-size:15px}
-.chips{display:flex;gap:8px;overflow-x:auto;padding:10px 18px 6px;scrollbar-width:none}
+.chips{display:flex;flex-wrap:wrap;gap:6px;padding:8px 18px 4px}
+#listControls.collapsed .chips{display:none!important}
+.filtbtn{display:flex;align-items:center;gap:6px;background:var(--surface);box-shadow:var(--shadow);
+  border-radius:14px;padding:10px 13px;font-size:13px;font-weight:700;color:var(--text-2);white-space:nowrap}
+.filtbtn svg{width:16px;height:16px}
+.filtbtn.on{background:var(--grey);color:#fff}
+.filtbtn .fdot{background:var(--green);color:#fff;border-radius:9px;padding:1px 6px;font-size:11px;font-weight:800}
 .chips.people{padding-top:2px}
+.chips .chip{flex:0 0 auto}
 .chip.mail{background:var(--green);color:#fff;display:flex;align-items:center;gap:6px}
 .chip.mail svg{width:13px;height:13px}
 .private{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:800;letter-spacing:.05em;
@@ -574,12 +581,16 @@ input.detail-title:focus{border-bottom:2px solid var(--green);margin-bottom:12px
   </div>
 
   <!-- Search + chips (list views only) -->
-  <div id="listControls">
+  <div id="listControls" class="collapsed">
     <div class="searchbar">
       <div class="search">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
         <input type="text" id="searchInput" placeholder="Search tasks…" autocomplete="off">
       </div>
+      <button class="filtbtn" id="filtBtn" onclick="toggleFilters()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5h18M6 12h12M10 19h4"/></svg>
+        <span id="filtLabel">Filter</span>
+      </button>
     </div>
     <div class="chips" id="ctxChips"></div>
     <div class="chips people" id="personChips"></div>
@@ -643,7 +654,7 @@ input.detail-title:focus{border-bottom:2px solid var(--green);margin-bottom:12px
 
 /* ---------- Constants / seed data ---------- */
 const CONTEXTS = ["Sales","Operations","Admin","Personal","Finance","Marketing"];
-const APP_VERSION = "v1.7.3";
+const APP_VERSION = "v1.8.0";
 const ME = { id:"me-denley", name:"Denley Hopkins", role:"Sales Team Leader", email:"", isMe:true };
 const SEED_MEMBERS = [
   ME,
@@ -1017,7 +1028,20 @@ function renderChips(){
     chip.onclick=()=>{ui.ctx=c;renderChips();render();};
     wrap.appendChild(chip);
   });
-  renderPeopleChips();
+  renderPeopleChips(); updateFilterBtn();
+}
+function toggleFilters(){
+  const lc=$("#listControls"); lc.classList.toggle("collapsed"); updateFilterBtn();
+}
+function updateFilterBtn(){
+  const b=$("#filtBtn"), l=$("#filtLabel"); if(!b||!l) return;
+  const lc=$("#listControls"); const open=!lc.classList.contains("collapsed");
+  const act=[]; if(ui.ctx&&ui.ctx!=="All") act.push(ui.ctx);
+  if(ui.mode==="tasks"&&ui.view==="all"&&ui.person&&ui.person!=="all"){
+    const m=member(ui.person); act.push(m?m.name.split(" ")[0]:"Person");
+  }
+  b.classList.toggle("on", open||act.length>0);
+  l.textContent = act.length ? act.join(" · ") : "Filter";
 }
 function renderPeopleChips(){
   const wrap=$("#personChips"); if(!wrap) return;
@@ -1032,6 +1056,7 @@ function renderPeopleChips(){
     chip.onclick=()=>{ui.person=id;renderChips();render();};
     wrap.appendChild(chip);
   });
+  updateFilterBtn();
   if(ui.person!=="All" && ui.person!=="unassigned"){
     const m=member(ui.person);
     const btn=el("button","chip mail",`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z"/><path d="M22 6l-10 7L2 6"/></svg>Email ${esc((m&&m.name.split(" ")[0])||"")}`);
@@ -1161,7 +1186,7 @@ function taskCard(t){
   const unassigned=isUnassigned(t);
   const asgHtml=unassigned
     ? `<span class="pill" style="background:${isEscalated(t)?'var(--hi-bg)':'var(--mid-bg)'};color:${isEscalated(t)?'var(--hi)':'var(--mid)'}">\u2691 No owner</span>`
-    : (asg&&!asg.isMe)?`<span class="mini-av" style="background:${colorFor(asg.id)}">${initials(asg.name)}</span>`:"";
+    : (asg&&asg.id!==myId())?`<span class="mini-av" style="background:${colorFor(asg.id)}">${initials(asg.name)}</span>`:"";
   const dueFlagHtml=needsDate(t)
     ? `<span class="pill" style="background:${isEscalated(t)?'var(--hi-bg)':'var(--mid-bg)'};color:${isEscalated(t)?'var(--hi)':'var(--mid)'}">\u2691 No due date</span>` : "";
   card.innerHTML=`
@@ -1347,7 +1372,7 @@ function renderTray(scope){
 }
 function trayAssign(id){
   const rows=state.members.map(m=>`<button class="who-row" onclick="trayPick('${id}','assignee','${m.id}')">
-    <div class="wa" style="background:${m.isMe?'var(--green)':colorFor(m.id)}">${initials(m.name)}</div>
+    <div class="wa" style="background:${m.id===myId()?'var(--green)':colorFor(m.id)}">${initials(m.name)}</div>
     <div style="flex:1"><div class="wn">${esc(m.name)}</div><div class="wr">${esc(m.role||"")}</div></div></button>`).join("");
   openSheet(`<div class="sheet-hd"><h2>Give this an owner</h2><button class="sheet-close" onclick="closeSheet()">${X}</button></div>
     <div class="sheet-body">${rows}</div>`);
@@ -1405,13 +1430,89 @@ function renderBriefing(){
   $("#briefingMount").appendChild(b);
 }
 function dismissBriefing(){ state.settings.briefingDismissed=todayStr(); save(); $("#briefingMount").innerHTML=""; }
-function setCurrentUser(id){ state.settings.currentUserId=id; save(); closeSheet(); render(); toast("This device is now "+((member(id)||{}).name||id)); }
+/* ---------- Per-person PIN ---------- */
+async function hashPin(id,pin){
+  const raw="gsd:"+id+":"+pin;
+  if(window.crypto&&crypto.subtle){
+    const buf=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(raw));
+    return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,"0")).join("");
+  }
+  let x=5381; for(let i=0;i<raw.length;i++) x=((x<<5)+x+raw.charCodeAt(i))|0;
+  return "f"+(x>>>0).toString(16);
+}
+function hasPin(id){ const m=member(id); return !!(m&&m.pinHash); }
+async function saveMemberPin(id,hash){
+  const m=member(id); if(!m) return;
+  if(hash) m.pinHash=hash; else delete m.pinHash;
+  m.updatedAt=nowISO(); save(); pushRow("members",m,false);
+}
+function applyCurrentUser(id){
+  state.settings.currentUserId=id; save(); closeSheet(); render();
+  toast("This device is now "+((member(id)||{}).name||id));
+}
+function setCurrentUser(id){
+  if(id===myId()||!hasPin(id)) return applyCurrentUser(id);
+  openPinPrompt(id);
+}
+function openPinPrompt(id){
+  const m=member(id)||{};
+  openSheet(`
+    <div class="sheet-hd"><h2>Enter ${esc((m.name||"").split(" ")[0])}'s PIN</h2><button class="sheet-close" onclick="closeSheet()">${X}</button></div>
+    <div class="sheet-body">
+      <div class="field"><input id="pinIn" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="off"
+        placeholder="••••" style="width:100%;text-align:center;letter-spacing:.5em;font-size:24px;padding:14px;border-radius:14px;border:1.5px solid var(--line);background:var(--surface-2)"></div>
+      <div id="pinErr" style="color:var(--hi);font-size:13px;text-align:center;min-height:18px;margin-bottom:8px"></div>
+      <button class="btn primary row" onclick="tryPin('${id}')">Unlock</button>
+    </div>`);
+  setTimeout(()=>{const i=$("#pinIn"); if(i){ i.focus(); i.onkeydown=e=>{ if(e.key==="Enter") tryPin(id); }; }},80);
+}
+async function tryPin(id){
+  const inp=$("#pinIn"); if(!inp) return;
+  const h=await hashPin(id,inp.value||"");
+  if(h===(member(id)||{}).pinHash) return applyCurrentUser(id);
+  const err=$("#pinErr"); if(err) err.textContent="Wrong PIN — try again";
+  inp.value=""; inp.focus();
+}
+function openPinSetup(){
+  const id=myId(), m=member(id)||{}, has=!!m.pinHash;
+  const fld=(lid,ph)=>`<input id="${lid}" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="off" placeholder="${ph}"
+    style="width:100%;text-align:center;letter-spacing:.4em;font-size:20px;padding:12px;border-radius:14px;border:1.5px solid var(--line);background:var(--surface-2);margin-bottom:10px">`;
+  openSheet(`
+    <div class="sheet-hd"><h2>${has?"Change":"Set"} your PIN</h2><button class="sheet-close" onclick="closeSheet()">${X}</button></div>
+    <div class="sheet-body">
+      <p style="color:var(--text-2);font-size:13.5px;margin:0 2px 14px;line-height:1.55">A 4–8 digit PIN for <b>${esc(m.name||"")}</b>. Anyone switching this device to you will have to enter it. It syncs to your other devices.</p>
+      ${has?fld("pinOld","Current PIN"):""}
+      ${fld("pinNew","New PIN")}
+      ${fld("pinNew2","Repeat new PIN")}
+      <div id="pinErr" style="color:var(--hi);font-size:13px;text-align:center;min-height:18px;margin-bottom:8px"></div>
+      <button class="btn primary row" onclick="savePinSetup()">${has?"Update PIN":"Set PIN"}</button>
+      ${has?'<button class="btn ghost row" style="margin-top:8px" onclick="removePin()">Remove PIN</button>':""}
+    </div>`);
+}
+async function savePinSetup(){
+  const id=myId(), m=member(id)||{}, err=$("#pinErr");
+  const fail=t=>{ if(err) err.textContent=t; };
+  if(m.pinHash){
+    const old=($("#pinOld")||{}).value||"";
+    if(await hashPin(id,old)!==m.pinHash) return fail("Current PIN is wrong");
+  }
+  const a=($("#pinNew")||{}).value||"", b=($("#pinNew2")||{}).value||"";
+  if(!/^[0-9]{4,8}$/.test(a)) return fail("Use 4–8 digits");
+  if(a!==b) return fail("The two new PINs don't match");
+  await saveMemberPin(id,await hashPin(id,a));
+  closeSheet(); render(); toast("✓ PIN saved");
+}
+async function removePin(){
+  if(!confirm("Remove your PIN? Anyone will be able to switch this device to you.")) return;
+  await saveMemberPin(myId(),null);
+  closeSheet(); render(); toast("PIN removed");
+}
 function openWhoAmI(){
   const me=myId();
   const rows=state.members.map(m=>`
     <button class="who-row${m.id===me?" on":""}" onclick="setCurrentUser('${m.id}')">
-      <div class="wa" style="background:${m.isMe?'var(--green)':colorFor(m.id)}">${initials(m.name)}</div>
-      <div style="flex:1"><div class="wn">${esc(m.name)}</div><div class="wr">${esc(m.role||"")}</div></div>
+      <div class="wa" style="background:${m.id===me?'var(--green)':colorFor(m.id)}">${initials(m.name)}</div>
+      <div style="flex:1"><div class="wn">${esc(m.name)}${m.pinHash&&m.id!==me?' 🔒':''}</div><div class="wr">${esc(m.role||"")}</div></div>
       <div class="wc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><path d="M20 6L9 17l-5-5"/></svg></div>
     </button>`).join("");
   openSheet(`
@@ -1425,7 +1526,7 @@ function updateAvatar(){
   const a=$("#meAvatar"); if(!a) return;
   const m=member(myId());
   a.textContent=initials((m||{}).name||"?");
-  a.style.background=(m&&m.isMe)?"var(--green)":colorFor(myId());
+  a.style.background=(m&&m.id===myId())?"var(--green)":colorFor(myId());
 }
 
 /* ---------- Team view ---------- */
@@ -1460,7 +1561,7 @@ function renderTeam(){
 
   // rings per member (only those with tasks, plus me)
   const withTasks=state.members.filter(m=>memberStats(m.id).total>0);
-  const showMembers=withTasks.length?withTasks:state.members.filter(m=>m.isMe);
+  const showMembers=withTasks.length?withTasks:state.members.filter(m=>m.id===myId());
   showMembers.forEach(m=>{
     const s=memberStats(m.id);
     const R=30,C=2*Math.PI*R, off=C-(s.rate/100)*C;
@@ -1473,7 +1574,7 @@ function renderTeam(){
         <div class="rc-num">${s.rate}%</div>
       </div>
       <div class="ring-info">
-        <div class="nm">${esc(m.name)}${m.isMe?' <span style="font-size:11px;color:var(--green);font-weight:700">· you</span>':''}</div>
+        <div class="nm">${esc(m.name)}${m.id===myId()?' <span style="font-size:11px;color:var(--green);font-weight:700">· you</span>':''}</div>
         <div class="role">${esc(m.role)}</div>
         <div class="stats">${s.done} done · ${s.open} open${s.overdue?` · <span style="color:var(--hi);font-weight:700">${s.overdue} overdue</span>`:''}</div>
         <div class="bar"><i style="width:${s.total?Math.round(s.done/s.total*100):0}%"></i></div>
@@ -1486,8 +1587,8 @@ function renderTeam(){
     const s=memberStats(m.id);
     html+=`
     <div class="mrow" data-member="${m.id}">
-      <div class="m-av" style="background:${m.isMe?'var(--green)':colorFor(m.id)}">${initials(m.name)}</div>
-      <div class="m-info"><div class="nm">${esc(m.name)}${m.isMe?' · you':''}</div><div class="role">${esc(m.role)}</div></div>
+      <div class="m-av" style="background:${m.id===myId()?'var(--green)':colorFor(m.id)}">${initials(m.name)}</div>
+      <div class="m-info"><div class="nm">${esc(m.name)}${m.id===myId()?' · you':''}</div><div class="role">${esc(m.role)}</div></div>
       <div class="m-count"><div class="n">${s.open}</div><div class="l">Open</div></div>
     </div>`;
   });
@@ -1513,6 +1614,11 @@ function renderMore(){
     <div class="list-row" onclick="openWhoAmI()">
       <div class="lic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
       <div class="lt"><div class="t">I am ${esc((member(meId)||{}).name||"")}</div><div class="s">Also switchable from the avatar, top right</div></div>
+      <div class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></div>
+    </div>
+    <div class="list-row" onclick="openPinSetup()">
+      <div class="lic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div>
+      <div class="lt"><div class="t">My PIN</div><div class="s">${hasPin(meId)?"On — asked when switching to you":"Off — anyone can switch to you"}</div></div>
       <div class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></div>
     </div>
   </div>
@@ -1687,7 +1793,7 @@ function recChanged(elm){
 function openEditor(id){
   const t = id ? state.tasks.find(x=>x.id===id) : {title:"",context:"Sales",priority:"Normal",dueDate:"",assignee:"me-denley",notes:"",recur:"none"};
   ui.editingId=id; ui.recDraft=t.recurCfg||null;
-  const memberOpts=state.members.map(m=>`<option value="${m.id}" ${t.assignee===m.id?"selected":""}>${esc(m.name)}${m.isMe?" (me)":""}</option>`).join("")+`<option value="unassigned" ${t.assignee==="unassigned"?"selected":""}>Unassigned</option>`;
+  const memberOpts=state.members.map(m=>`<option value="${m.id}" ${t.assignee===m.id?"selected":""}>${esc(m.name)}${m.id===myId()?" (me)":""}</option>`).join("")+`<option value="unassigned" ${t.assignee==="unassigned"?"selected":""}>Unassigned</option>`;
   const ctxOpts=CONTEXTS.map(c=>`<option ${t.context===c?"selected":""}>${c}</option>`).join("");
   const recOpts=[["none","Does not repeat"],["daily","Daily"],["weekly","Weekly"],["monthly","Monthly"]]
     .map(([v,l])=>`<option value="${v}" ${t.recur===v?"selected":""}>${l}</option>`).join("");
@@ -1779,7 +1885,7 @@ function openDetail(id){
       <div class="trail-ic ${ic}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">${svg}</svg></div>
       <div><div class="trail-txt">${esc(a.text)}</div><div class="trail-time">${relTime(a.at)} · ${new Date(a.at).toLocaleString(undefined,{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"})}</div></div></div>`;
   }).join("");
-  const emailBtn = (asg&&!asg.isMe&&asg.email)
+  const emailBtn = (asg&&asg.id!==myId()&&asg.email)
     ? `<button class="btn ghost row" onclick="openEmailSheet('${t.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 7l-10 6L2 7"/></svg>Email ${esc(asg.name.split(" ")[0])} a follow-up</button>` : "";
   openSheet(`
     <div class="sheet-hd"><h2>Task</h2><button class="sheet-close" onclick="closeSheet()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>
@@ -1852,7 +1958,7 @@ function openMemberSheet(id){
     <div class="sheet-hd"><h2>${esc(m.name.split(" ")[0])}</h2><button class="sheet-close" onclick="closeSheet()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>
     <div class="sheet-body">
       <div style="display:flex;align-items:center;gap:16px;margin-bottom:18px">
-        <div class="m-av" style="width:60px;height:60px;font-size:22px;background:${m.isMe?'var(--green)':colorFor(m.id)}">${initials(m.name)}</div>
+        <div class="m-av" style="width:60px;height:60px;font-size:22px;background:${m.id===myId()?'var(--green)':colorFor(m.id)}">${initials(m.name)}</div>
         <div><div style="font-weight:800;font-size:19px">${esc(m.name)}</div><div style="color:var(--text-3);font-size:14px">${esc(m.role)}</div>${m.email?`<div style="color:var(--green);font-size:13px;margin-top:2px">${esc(m.email)}</div>`:""}</div>
       </div>
       <div class="ring-card" style="margin-bottom:16px">
@@ -2370,7 +2476,7 @@ Respond with ONLY valid JSON, no prose or markdown: {"actions":[{"title":"","own
 function renderReview(){
   const list=window._extracted||[];
   const cell="padding:8px 10px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface-2);font-size:13px;width:100%";
-  const memOpts=(sel)=>state.members.map(m=>`<option value="${m.id}" ${sel===m.id?"selected":""}>${esc(m.name)}${m.isMe?" (me)":""}</option>`).join("")+`<option value="unassigned" ${sel==="unassigned"?"selected":""}>Unassigned</option>`;
+  const memOpts=(sel)=>state.members.map(m=>`<option value="${m.id}" ${sel===m.id?"selected":""}>${esc(m.name)}${m.id===myId()?" (me)":""}</option>`).join("")+`<option value="unassigned" ${sel==="unassigned"?"selected":""}>Unassigned</option>`;
   const ctxOpts=(sel)=>CONTEXTS.map(c=>`<option ${sel===c?"selected":""}>${c}</option>`).join("");
   const prOpts=(sel)=>["High","Normal","Low"].map(p=>`<option ${sel===p?"selected":""}>${p}</option>`).join("");
   const cards=list.map((a,i)=>`
