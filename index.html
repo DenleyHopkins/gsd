@@ -643,7 +643,7 @@ input.detail-title:focus{border-bottom:2px solid var(--green);margin-bottom:12px
 
 /* ---------- Constants / seed data ---------- */
 const CONTEXTS = ["Sales","Operations","Admin","Personal","Finance","Marketing"];
-const APP_VERSION = "v1.7.0";
+const APP_VERSION = "v1.7.1";
 const ME = { id:"me-denley", name:"Denley Hopkins", role:"Sales Team Leader", email:"", isMe:true };
 const SEED_MEMBERS = [
   ME,
@@ -1505,7 +1505,7 @@ function renderMore(){
     </div>
     <div class="list-row" onclick="doSync()">
       <div class="lic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16"/></svg></div>
-      <div class="lt"><div class="t">Sync now</div><div class="s">${ui.lastSync?"Last: "+relTime(ui.lastSync):"Pull & push all changes"}</div></div>
+      <div class="lt"><div class="t">Sync now</div><div class="s">${ui.lastSync?"Last: "+relTime(ui.lastSync):"Pull & push all changes"}${state.settings.supabaseUrl?" \u00b7 live: "+(ui.rtStatus==="SUBSCRIBED"?"on":(ui.rtStatus||"connecting").toLowerCase()):""}</div></div>
       <div class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></div>
     </div>
     <div class="list-row" onclick="exportBackup()">
@@ -1953,7 +1953,7 @@ async function startAutoSync(){
   await doSync(true);
   // periodic fallback poll (covers push + pull if realtime drops)
   if(autoSyncTimer) clearInterval(autoSyncTimer);
-  autoSyncTimer=setInterval(()=>{ if(document.visibilityState==="visible") doSync(true); },15000);
+  autoSyncTimer=setInterval(()=>{ if(document.visibilityState==="visible") doSync(true); },5000);
   // realtime — near-instant pickup of other devices' changes
   try{
     const sb=await ensureSupabase(); if(!sb) return;
@@ -1964,8 +1964,15 @@ async function startAutoSync(){
       .on("postgres_changes",{event:"*",schema:"public",table:"members"},bump)
       .on("postgres_changes",{event:"*",schema:"public",table:"timesheet"},bump)
       .on("postgres_changes",{event:"*",schema:"public",table:"ideas"},bump)
-      .subscribe();
-  }catch(e){ console.warn("realtime setup failed",e); }
+      .subscribe(st=>{
+        ui.rtStatus=st;
+        if(st==="SUBSCRIBED") doSync(true);
+        if(st==="CLOSED"||st==="CHANNEL_ERROR"||st==="TIMED_OUT"){
+          clearTimeout(ui.rtRetry);
+          ui.rtRetry=setTimeout(()=>{ if(document.visibilityState==="visible") startAutoSync(); },4000);
+        }
+      });
+  }catch(e){ ui.rtStatus="failed"; console.warn("realtime setup failed",e); }
   // sync the moment the tab/app regains focus
   if(!focusHooked){ focusHooked=true;
     document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") doSync(true); });
