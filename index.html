@@ -643,7 +643,7 @@ input.detail-title:focus{border-bottom:2px solid var(--green);margin-bottom:12px
 
 /* ---------- Constants / seed data ---------- */
 const CONTEXTS = ["Sales","Operations","Admin","Personal","Finance","Marketing"];
-const APP_VERSION = "v1.7.1";
+const APP_VERSION = "v1.7.2";
 const ME = { id:"me-denley", name:"Denley Hopkins", role:"Sales Team Leader", email:"", isMe:true };
 const SEED_MEMBERS = [
   ME,
@@ -676,6 +676,7 @@ let state = {
   members: [],
   timesheet: {},
   ideas: [],
+  tombstones: {},
   settings: {
     theme:"light", supabaseUrl:"", supabaseKey:"",
     milestonesSeen:[], briefingDismissed:"", focusDuration:25, currentUserId:"me-denley",
@@ -784,7 +785,7 @@ function save(){ localStorage.setItem(LS, JSON.stringify(state)); }
 function load(){
   try{
     const raw=localStorage.getItem(LS);
-    if(raw){ const p=JSON.parse(raw); state.tasks=p.tasks||[]; state.members=p.members||[]; state.timesheet=p.timesheet||{}; state.ideas=p.ideas||[]; state.settings={...state.settings,...(p.settings||{})}; }
+    if(raw){ const p=JSON.parse(raw); state.tasks=p.tasks||[]; state.members=p.members||[]; state.timesheet=p.timesheet||{}; state.ideas=p.ideas||[]; state.tombstones=p.tombstones||{}; state.settings={...state.settings,...(p.settings||{})}; }
   }catch(e){ console.warn("load failed",e); }
   if(!state.members.length) state.members = SEED_MEMBERS.map(m=>({...m}));
   else { // ensure "me" always present & updated
@@ -2023,7 +2024,17 @@ function clearSync(){
   closeSheet(); render(); toast("Disconnected from cloud");
 }
 async function pushTask(t){ pushRow("tasks",t); }
-async function pushTaskDelete(t){ pushRow("tasks",t,true); }
+async function pushTaskDelete(t){ markDeleted(t.id); pushRow("tasks",t,true); }
+/* Tombstone ledger — a deleted id can never be pushed back by another device */
+function markDeleted(id){
+  if(!state.tombstones) state.tombstones={};
+  state.tombstones[id]=nowISO(); save();
+}
+function pruneTombstones(t){
+  const cut=Date.now()-90*86400000, out={};
+  Object.entries(t||{}).forEach(([id,at])=>{ if(new Date(at).getTime()>cut) out[id]=at; });
+  return out;
+}
 async function pushRow(table,obj,deleted){
   if(!state.settings.supabaseUrl) return;
   try{
@@ -2037,9 +2048,26 @@ async function doSync(silent){
   if(!silent) toast("Syncing…");
   try{
     const sb=await ensureSupabase(); if(!sb) throw new Error("no client");
-    // PUSH local
+    // ---- TASKS: pull BEFORE push, so a device that hasn't caught up can't
+    // resurrect a task someone else deleted. Tombstones win, always. ----
+    const {data:rTasks}=await sb.from("tasks").select("*");
+    const tomb={...(state.tombstones||{})};
+    const tmap={}; state.tasks.forEach(t=>tmap[t.id]=t);
+    if(rTasks) rTasks.forEach(r=>{
+      if(r.deleted){ tomb[r.id]=r.updated_at||nowISO(); return; }
+      const local=tmap[r.id];
+      if(!local || new Date(r.updated_at) > new Date(local.updatedAt||0)) tmap[r.id]=r.payload;
+    });
+    Object.keys(tomb).forEach(id=>delete tmap[id]);
+    state.tasks=Object.values(tmap);
+    state.tombstones=pruneTombstones(tomb);
+    // PUSH local (tombstoned ids are gone from state.tasks, so never re-pushed)
     const taskRows=state.tasks.map(t=>({id:t.id,payload:t,updated_at:t.updatedAt||nowISO(),deleted:false}));
     if(taskRows.length) await sb.from("tasks").upsert(taskRows);
+    // re-assert any tombstone another device has flipped back to live
+    const revived=(rTasks||[]).filter(r=>!r.deleted && state.tombstones[r.id])
+      .map(r=>({id:r.id,payload:r.payload,updated_at:nowISO(),deleted:true}));
+    if(revived.length) await sb.from("tasks").upsert(revived);
     const memRows=state.members.map(m=>({id:m.id,payload:m,updated_at:nowISO(),deleted:false}));
     await sb.from("members").upsert(memRows);
     // timesheet (own try — table may not exist on older setups)
@@ -2070,6 +2098,7 @@ async function doSync(silent){
           const local=map[r.id];
           if(!local || new Date(r.updated_at) > new Date(local.updatedAt||0)) map[r.id]=r.payload;
         });
+        Object.keys(state.tombstones||{}).forEach(id=>delete map[id]);
         state.ideas=Object.values(map);
         const after=newIdeas().length;
         if(after>before && myId()===(state.members.find(m=>m.isMe)||{}).id)
@@ -2077,17 +2106,7 @@ async function doSync(silent){
       }
     }catch(idErr){ console.warn("ideas sync skipped",idErr&&idErr.message); }
     // PULL remote
-    const {data:rTasks}=await sb.from("tasks").select("*");
     const {data:rMembers}=await sb.from("members").select("*");
-    if(rTasks){
-      const map={}; state.tasks.forEach(t=>map[t.id]=t);
-      rTasks.forEach(r=>{
-        if(r.deleted){ delete map[r.id]; return; }
-        const local=map[r.id];
-        if(!local || new Date(r.updated_at) > new Date(local.updatedAt||0)) map[r.id]=r.payload;
-      });
-      state.tasks=Object.values(map);
-    }
     if(rMembers){
       const map={}; state.members.forEach(m=>map[m.id]=m);
       rMembers.forEach(r=>{ if(!r.deleted) map[r.id]=r.payload; });
@@ -2176,6 +2195,7 @@ function deleteIdea(id){
   const i=(state.ideas||[]).find(x=>x.id===id); if(!i) return;
   if(!confirm("Delete this suggestion?")) return;
   state.ideas=state.ideas.filter(x=>x.id!==id); save(); pushRow("ideas",i,true);
+  markDeleted(id);
   openIdeasList(); render();
 }
 function ideaToTask(id){
