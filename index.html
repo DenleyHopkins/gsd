@@ -654,7 +654,7 @@ input.detail-title:focus{border-bottom:2px solid var(--green);margin-bottom:12px
 
 /* ---------- Constants / seed data ---------- */
 const CONTEXTS = ["Sales","Operations","Admin","Personal","Finance","Marketing"];
-const APP_VERSION = "v1.8.0";
+const APP_VERSION = "v1.8.1";
 const ME = { id:"me-denley", name:"Denley Hopkins", role:"Sales Team Leader", email:"", isMe:true };
 const SEED_MEMBERS = [
   ME,
@@ -2519,6 +2519,13 @@ function addExtracted(){
   save(); closeSheet(); render(); toast("✓ Added "+chosen.length+" action"+(chosen.length!==1?"s":""));
 }
 
+/* Graph returns wall-clock times in the Prefer timezone (Europe/London),
+   so parse the parts directly — appending "Z" shifted everything by the BST offset. */
+function graphLocal(str){
+  const m=/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/.exec(str||"");
+  if(!m) return new Date(str);
+  return new Date(+m[1],+m[2]-1,+m[3],+m[4],+m[5],0,0);
+}
 /* ============================================================
    OUTLOOK CALENDAR (Microsoft Graph)
    Dormant until a client ID is entered in More → Outlook calendar.
@@ -2605,7 +2612,7 @@ async function outlookSync(date){
       if(ev.isAllDay) return;
       const resp=((ev.responseStatus||{}).response||"").toLowerCase();
       if(!(ev.isOrganizer||resp==="accepted"||resp==="organizer")) return;
-      const s=new Date(ev.start.dateTime+"Z"), e=new Date(ev.end.dateTime+"Z");
+      const s=graphLocal(ev.start.dateTime), e=graphLocal(ev.end.dateTime);
       const sl=slotOfDate(s), el=Math.max(sl+1,slotOfDate(new Date(e.getTime()-1))+1);
       const cat=eventCategory(ev), finished=e.getTime()<now;
       for(let x=sl;x<el;x++){
