@@ -654,7 +654,7 @@ input.detail-title:focus{border-bottom:2px solid var(--green);margin-bottom:12px
 
 /* ---------- Constants / seed data ---------- */
 const CONTEXTS = ["Sales","Operations","Admin","Personal","Finance","Marketing"];
-const APP_VERSION = "v1.8.1";
+const APP_VERSION = "v1.8.2";
 const ME = { id:"me-denley", name:"Denley Hopkins", role:"Sales Team Leader", email:"", isMe:true };
 const SEED_MEMBERS = [
   ME,
@@ -2193,7 +2193,7 @@ async function doSync(silent){
     const revived=(rTasks||[]).filter(r=>!r.deleted && state.tombstones[r.id])
       .map(r=>({id:r.id,payload:r.payload,updated_at:nowISO(),deleted:true}));
     if(revived.length) await sb.from("tasks").upsert(revived);
-    const memRows=state.members.map(m=>({id:m.id,payload:m,updated_at:nowISO(),deleted:false}));
+    const memRows=state.members.map(m=>({id:m.id,payload:m,updated_at:m.updatedAt||nowISO(),deleted:false}));
     await sb.from("members").upsert(memRows);
     // timesheet (own try — table may not exist on older setups)
     try{
@@ -2234,7 +2234,15 @@ async function doSync(silent){
     const {data:rMembers}=await sb.from("members").select("*");
     if(rMembers){
       const map={}; state.members.forEach(m=>map[m.id]=m);
-      rMembers.forEach(r=>{ if(!r.deleted) map[r.id]=r.payload; });
+      rMembers.forEach(r=>{
+        if(r.deleted) return;
+        const local=map[r.id], rp=r.payload||{};
+        const remoteNewer = !local || new Date(r.updated_at||0) > new Date(local.updatedAt||0);
+        if(remoteNewer){
+          if(local&&local.pinHash&&!("pinHash" in rp)) rp.pinHash=local.pinHash; // older row predates PINs
+          map[r.id]=rp;
+        }
+      });
       state.members=Object.values(map);
       if(!state.members.find(m=>m.isMe)) state.members.unshift({...ME});
     }
