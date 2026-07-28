@@ -665,7 +665,7 @@ input.detail-title:focus{border-bottom:2px solid var(--green);margin-bottom:12px
 
 /* ---------- Constants / seed data ---------- */
 const CONTEXTS = ["Sales","Operations","Admin","Personal","Finance","Marketing"];
-const APP_VERSION = "v1.9.4";
+const APP_VERSION = "v1.9.5";
 const ME = { id:"me-denley", name:"Denley Hopkins", role:"Sales Team Leader", email:"", isMe:true };
 const SEED_MEMBERS = [
   ME,
@@ -2610,7 +2610,6 @@ function outlookDisconnect(){
 }
 /* Slot index for a Date (may be negative or beyond TS_SLOTS — the sheet widens) */
 function slotOfDate(d){ return Math.floor(((d.getHours()-TS_START)*60+d.getMinutes())/15); }
-function eventCategory(ev){ return "Meeting / Team Discussion"; }
 async function outlookSync(date){
   if(!outlookConfigured()||!state.settings.msConnected||_msBusy) return;
   if(_msDone[date] && Date.now()-_msDone[date]<120000) return;
@@ -2629,12 +2628,10 @@ async function outlookSync(date){
       if(!(ev.isOrganizer||resp==="accepted"||resp==="organizer")) return;
       const s=graphLocal(ev.start.dateTime), e=graphLocal(ev.end.dateTime);
       const sl=slotOfDate(s), el=Math.max(sl+1,slotOfDate(new Date(e.getTime()-1))+1);
-      const cat=eventCategory(ev);
       for(let x=sl;x<el;x++){
         const {k,e:entry}=tsEnsure(date,x);
         let changed=false;
         if(!entry.plan && !entry.planCleared){ entry.plan=ev.subject||"Meeting"; changed=true; }
-        if(entry.calCat!==cat){ entry.calCat=cat; changed=true; }   // remembered, not applied
         if(changed){ entry.source="outlook"; state.timesheet[k]=entry; tsSave(entry); touched++; }
       }
     });
@@ -2729,8 +2726,7 @@ function tsText(date,slot,field,val){
     const auto=e.autoCat;
     if(looksLikeMeeting(val)){
       if(!e.cats||!e.cats.length){
-        const cat=e.calCat||"Meeting / Team Discussion";
-        e.cats=[cat]; e.autoCat=cat; tsPaintCats(e);
+        e.cats=["Meeting / Team Discussion"]; e.autoCat=e.cats[0]; tsPaintCats(e);
       }
     } else if(auto && (e.cats||[]).length===1 && e.cats[0]===auto){
       e.cats=[]; delete e.autoCat; tsPaintCats(e);   // word removed — take the auto tag back off
