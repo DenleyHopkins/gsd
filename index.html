@@ -676,7 +676,7 @@ input.detail-title:focus{border-bottom:2px solid var(--green);margin-bottom:12px
 
 /* ---------- Constants / seed data ---------- */
 const CONTEXTS = ["Sales","Operations","Admin","Personal","Finance","Marketing"];
-const APP_VERSION = "v1.12.1";
+const APP_VERSION = "v1.13.0";
 const ME = { id:"me-denley", name:"Denley Hopkins", role:"Sales Team Leader", email:"", isMe:true };
 const SEED_MEMBERS = [
   ME,
@@ -2315,7 +2315,7 @@ function openIdeasList(){
     const rank=s=>({new:0,reviewed:1,shipped:2})[s||"new"];
     return rank(a.status)-rank(b.status) || new Date(b.createdAt)-new Date(a.createdAt);
   });
-  const rows=list.length?list.map(i=>{
+  const card=i=>{
     const st=i.status||"new";
     const pill=st==="new"?'<span class="sync-status err">New</span>':st==="reviewed"?'<span class="sync-status">Reviewed</span>':'<span class="sync-status ok">Shipped</span>';
     return `<div style="border:1px solid var(--line);border-radius:14px;padding:13px 14px;margin-bottom:10px;background:var(--surface-2)">
@@ -2332,7 +2332,19 @@ function openIdeasList(){
         <button class="chip" style="margin-left:auto;color:var(--hi)" onclick="deleteIdea('${i.id}')">Delete</button>
       </div>
     </div>`;
-  }).join(""):'<p style="color:var(--text-3);font-size:13.5px;margin:2px">No suggestions yet. Anyone on the team can add one from More → Suggest an improvement.</p>';
+  };
+  const live=list.filter(i=>(i.status||"new")!=="shipped");
+  const shipped=list.filter(i=>(i.status||"new")==="shipped");
+  const rows=(live.length?live.map(card).join("")
+    :'<p style="color:var(--text-3);font-size:13.5px;margin:2px">No open suggestions. Anyone on the team can add one from More → Suggest an improvement.</p>')
+    + (shipped.length?`<details style="margin-top:14px">
+      <summary style="cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;padding:11px 14px;border:1px solid var(--line);border-radius:14px;background:var(--surface-2)">
+        <span style="font-size:13.5px;font-weight:700">Shipped</span>
+        <span class="sync-status ok">${shipped.length}</span>
+        <span style="margin-left:auto;color:var(--text-3);font-size:12px">tap to show</span>
+      </summary>
+      <div style="margin-top:10px">${shipped.map(card).join("")}</div>
+    </details>`:"");
   openSheet(`
   <div class="sheet-hd"><h2>Suggestion box</h2><button class="sheet-close" onclick="closeSheet()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>
   <div class="sheet-body">
