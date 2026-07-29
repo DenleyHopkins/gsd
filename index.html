@@ -676,7 +676,7 @@ input.detail-title:focus{border-bottom:2px solid var(--green);margin-bottom:12px
 
 /* ---------- Constants / seed data ---------- */
 const CONTEXTS = ["Sales","Operations","Admin","Personal","Finance","Marketing"];
-const APP_VERSION = "v1.16.0";
+const APP_VERSION = "v1.17.0";
 const ME = { id:"me-denley", name:"Denley Hopkins", role:"Sales Team Leader", email:"denley.hopkins@wilsonscolchester.com", isMe:true };
 const SEED_MEMBERS = [
   ME,
@@ -1123,41 +1123,63 @@ function mailGroups(list){
   const today=todayStr();
   const wk=new Date(); wk.setDate(wk.getDate()+7); const wkStr=wk.toISOString().slice(0,10);
   const g=[
-    {key:"overdue", label:"Overdue",      tone:"#d64545", note:"needs an answer first", items:list.filter(t=>isOverdue(t))},
-    {key:"today",   label:"Due today",    tone:"#26271f", note:"", items:list.filter(t=>!isOverdue(t)&&t.dueDate===today)},
-    {key:"week",    label:"Next 7 days",  tone:"#26271f", note:"", items:list.filter(t=>t.dueDate&&t.dueDate>today&&t.dueDate<=wkStr&&!isOverdue(t))},
-    {key:"later",   label:"Later",        tone:"#6c6e64", note:"", items:list.filter(t=>t.dueDate&&t.dueDate>wkStr)},
-    {key:"nodate",  label:"No due date",  tone:"#6c6e64", note:"", items:list.filter(t=>!t.dueDate)}
+    {key:"overdue", label:"Overdue",     tone:"#8f2222", band:"#fbe4e4", note:"needs an answer first", items:list.filter(t=>isOverdue(t))},
+    {key:"today",   label:"Due today",   tone:"#3f5a0e", band:"#eaf4d6", note:"", items:list.filter(t=>!isOverdue(t)&&t.dueDate===today)},
+    {key:"week",    label:"Next 7 days", tone:"#33342c", band:"#f0f1ea", note:"", items:list.filter(t=>t.dueDate&&t.dueDate>today&&t.dueDate<=wkStr&&!isOverdue(t))},
+    {key:"later",   label:"Later",       tone:"#55574c", band:"#f0f1ea", note:"", items:list.filter(t=>t.dueDate&&t.dueDate>wkStr)},
+    {key:"nodate",  label:"No due date", tone:"#55574c", band:"#f0f1ea", note:"", items:list.filter(t=>!t.dueDate)}
   ];
   const ord={High:0,Medium:1,Low:2};
   g.forEach(s=>s.items.sort((a,b)=>(ord[a.priority]??1)-(ord[b.priority]??1)||String(a.dueDate).localeCompare(String(b.dueDate))));
   return g.filter(s=>s.items.length);
 }
 function mailSectionHtml(s){
-  const rows=s.items.map(t=>`<tr><td style="padding:11px 16px;border-bottom:1px solid #eceee6;">
+  const rows=s.items.map(t=>`<tr><td style="padding:11px 16px;border-top:1px solid #eceee6;font-family:${MAIL_FF};">
       <div style="font-size:15px;font-weight:700;color:#26271f;">${esc(t.title)}</div>
-      <div style="font-size:12px;color:#6c6e64;margin-top:3px;">
-        <span style="color:${MAIL_PRI[t.priority]||"#6c6e64"};font-weight:700;">${esc(t.priority)}</span>
+      <div style="font-size:12.5px;color:#55574c;padding-top:3px;">
+        <span style="color:${MAIL_PRI[t.priority]||"#55574c"};font-weight:700;">${esc(t.priority)}</span>
         &nbsp;\u00b7&nbsp;${esc(t.context)}&nbsp;\u00b7&nbsp;${s.key==="overdue"?"was due ":""}${esc(mailDue(t))}
       </div></td></tr>`).join("");
-  return `<div style="padding:14px 16px 7px;font-size:12px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:${s.tone};">
-      ${esc(s.label)} \u00b7 ${s.items.length}${s.note?` <span style="text-transform:none;letter-spacing:0;font-weight:600;color:#6c6e64;">\u2014 ${s.note}</span>`:""}
-    </div><table style="width:100%;border-collapse:collapse;">${rows}</table>`;
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;">
+      <tr><td bgcolor="${s.band}" style="background-color:${s.band};padding:10px 16px;font-family:${MAIL_FF};font-size:12px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:${s.tone};">
+        ${esc(s.label)} \u00b7 ${s.items.length}${s.note?` <span style="text-transform:none;letter-spacing:0;font-weight:600;color:${s.tone};">\u2014 ${s.note}</span>`:""}
+      </td></tr>${rows}</table>`;
 }
+/* Outlook desktop renders with the Word engine: no gradients, no border-radius,
+   no max-width on divs. Everything below is table + solid bgcolor so the header
+   keeps a real background behind its white text instead of going white-on-white. */
+const MAIL_FF="-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
 function mailShell(kicker,heading,sub,sections,closing){
-  return `<!doctype html><html><body style="margin:0;background:#f4f5ef;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
-    <div style="max-width:560px;margin:0 auto;padding:24px 16px;">
-      <div style="background:linear-gradient(135deg,#7EBA28,#5f9018);border-radius:16px;padding:22px 20px;color:#fff;">
-        <div style="font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;opacity:.9;">${esc(kicker)}</div>
-        <div style="font-size:22px;font-weight:800;margin-top:6px;">${esc(heading)}</div>
-        <div style="font-size:14px;margin-top:5px;opacity:.92;">${esc(sub)}</div>
-      </div>
-      <div style="background:#fff;border-radius:16px;margin-top:14px;overflow:hidden;border:1px solid #eceee6;">${sections}</div>
-      <div style="font-size:14px;color:#26271f;line-height:1.6;margin:18px 2px 0;">${closing}</div>
-      <div style="text-align:center;margin-top:18px;">
-        <a href="https://denleyhopkins.github.io/gsd/" style="display:inline-block;background:#26271f;color:#fff;text-decoration:none;font-size:14px;font-weight:700;padding:12px 22px;border-radius:12px;">Open GSD</a>
-      </div>
-    </div></body></html>`;
+  return `<!doctype html><html><head><meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="light only"><meta name="supported-color-schemes" content="light only"></head>
+    <body style="margin:0;padding:0;background-color:#f4f5ef;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f4f5ef" style="background-color:#f4f5ef;">
+      <tr><td align="center" style="padding:24px 12px;">
+        <table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" style="width:560px;max-width:100%;">
+
+          <tr><td bgcolor="#4f7a12" style="background-color:#4f7a12;padding:22px 20px;font-family:${MAIL_FF};">
+            <div style="font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#e4f2c9;">${esc(kicker)}</div>
+            <div style="font-size:22px;font-weight:800;margin-top:6px;color:#ffffff;">${esc(heading)}</div>
+            <div style="font-size:14px;margin-top:5px;color:#eef7dc;">${esc(sub)}</div>
+          </td></tr>
+
+          <tr><td style="height:14px;line-height:14px;font-size:0;">&nbsp;</td></tr>
+
+          <tr><td bgcolor="#ffffff" style="background-color:#ffffff;border:1px solid #dfe2d6;">${sections}</td></tr>
+
+          <tr><td style="padding:18px 4px 0;font-family:${MAIL_FF};font-size:14px;color:#26271f;line-height:1.6;">${closing}</td></tr>
+
+          <tr><td align="center" style="padding:20px 0 0;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
+              <td bgcolor="#26271f" style="background-color:#26271f;padding:12px 24px;">
+                <a href="https://denleyhopkins.github.io/gsd/" style="font-family:${MAIL_FF};font-size:14px;font-weight:700;color:#ffffff;text-decoration:none;">Open GSD</a>
+              </td></tr></table>
+          </td></tr>
+
+        </table>
+      </td></tr>
+    </table></body></html>`;
 }
 function mailSectionsText(g){
   return g.map(s=>s.label.toUpperCase()+" ("+s.items.length+")\n"+
