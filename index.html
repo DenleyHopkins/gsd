@@ -676,8 +676,8 @@ input.detail-title:focus{border-bottom:2px solid var(--green);margin-bottom:12px
 
 /* ---------- Constants / seed data ---------- */
 const CONTEXTS = ["Sales","Operations","Admin","Personal","Finance","Marketing"];
-const APP_VERSION = "v1.13.0";
-const ME = { id:"me-denley", name:"Denley Hopkins", role:"Sales Team Leader", email:"", isMe:true };
+const APP_VERSION = "v1.14.1";
+const ME = { id:"me-denley", name:"Denley Hopkins", role:"Sales Team Leader", email:"denley.hopkins@wilsonscolchester.com", isMe:true };
 const SEED_MEMBERS = [
   ME,
   { id:"m-abi", name:"Abi Hopkins", role:"Business Development Executive", email:"abi.hopkins@wilsonscolchester.com" },
@@ -841,6 +841,7 @@ function load(){
   else { // ensure "me" always present & updated
     if(!state.members.find(m=>m.isMe)) state.members.unshift({...ME});
   }
+  SEED_MEMBERS.forEach(seed=>{ const m=state.members.find(x=>x.id===seed.id); if(m&&!m.email&&seed.email) m.email=seed.email; });
 }
 
 /* ---------- Activity trail ---------- */
@@ -1106,7 +1107,7 @@ function openBulkReminder(id){
     <div class="sheet-hd"><h2>Bulk reminder</h2><button class="sheet-close" onclick="closeSheet()">${X}</button></div>
     <div class="sheet-body">
       <p style="color:var(--text-2);font-size:13.5px;margin:0 2px 4px;line-height:1.55">One email to <b>${esc(m.name)}</b> listing all ${list.length} outstanding action${list.length!==1?"s":""}${over?` \u00b7 <span style="color:var(--hi);font-weight:700">${over} overdue</span>`:""}.</p>
-      ${m.email?"":`<p style="color:var(--hi);font-size:12.5px;margin:8px 2px;font-weight:700">No email address on file \u2014 add one in Team.</p>`}
+      ${m.email?"":`<p style="color:var(--hi);font-size:12.5px;margin:8px 2px;font-weight:700">No email address on file \u2014 <a href="#" onclick="closeSheet();setTimeout(()=>editMemberEmail('${id}'),220);return false" style="font-weight:800">add one now</a>.</p>`}
       <div style="margin:10px 0 16px">${rows}</div>
       <button class="btn" onclick="sendBulkReminder('${id}')">Open email</button>
     </div>`);
@@ -1121,7 +1122,7 @@ function sendBulkReminder(id){
   const body=`Hi ${fn},\n\nA quick summary of the actions currently open against your name:\n\n${lines}\n\nCould you let me know where each of these stands${over?", starting with the overdue ones":""}? If anything needs re-prioritising or more time, tell me and we'll adjust.\n\nThanks,\n${(member(myId())||{}).name||""}`;
   list.forEach(t=>{ logAct(t,"email",`Bulk reminder sent to ${fn}`); upsertTask(t); });
   closeSheet(); render();
-  window.location.href=`mailto:${m.email||""}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  openMailDraft(m.email||"",subject,body);
 }
 
 /* ---------- List view ---------- */
@@ -1324,7 +1325,7 @@ function sendHandover(id,idsStr){
   const body=`Hi ${fn},\n\nI've moved the following ${list.length} actions over to you:\n\n${lines}\n\nShout if any of these need a different owner or more time.\n\nThanks,\n${(member(myId())||{}).name||""}`;
   list.forEach(t=>{ logAct(t,"email",`Handover emailed to ${fn}`); upsertTask(t); });
   closeSheet(); render();
-  window.location.href=`mailto:${m.email||""}?subject=${encodeURIComponent(`${list.length} actions handed over to you`)}&body=${encodeURIComponent(body)}`;
+  openMailDraft(m.email||"",`${list.length} actions handed over to you`,body);
 }
 function bulkPriority(){
   const rows=["High","Normal","Low"].map(p=>`<button class="ti" onclick="applyBulkField('priority','${p}')"><span class="dot" style="background:${p==='High'?'var(--hi)':p==='Low'?'var(--lo)':'var(--mid)'}"></span><span class="tt">${p}</span></button>`).join("");
@@ -1933,6 +1934,39 @@ function openDetail(id){
     </div>`);
 }
 
+function editMemberEmail(id){
+  const m=member(id); if(!m) return;
+  openSheet(`<div class="sheet-hd"><h2>Email address</h2><button class="sheet-close" onclick="closeSheet()">${X}</button></div>
+    <div class="sheet-body">
+      <p style="color:var(--text-2);font-size:13.5px;margin:0 2px 14px;line-height:1.55">Used for reminders and handover emails to <b>${esc(m.name)}</b>. Syncs to everyone's device.</p>
+      <div class="field"><label>Email address</label><input type="email" id="memEmail" inputmode="email" autocapitalize="off" spellcheck="false" value="${esc(m.email||"")}" placeholder="name@wilsonscolchester.com"></div>
+      <button class="btn" onclick="saveMemberEmail('${id}')">Save</button>
+    </div>`);
+  setTimeout(()=>{ const i=$("#memEmail"); if(i){ i.focus(); i.select(); } },120);
+}
+function saveMemberEmail(id){
+  const m=member(id); if(!m) return;
+  const v=($("#memEmail").value||"").trim();
+  if(v && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v)) return toast("That doesn't look like an email address");
+  m.email=v; m.updatedAt=nowISO(); save(); pushRow("members",m,false);
+  closeSheet(); render(); toast(v?"Email saved":"Email cleared");
+  setTimeout(()=>openMemberSheet(id),220);
+}
+
+/* Drafts open in Outlook classic where it's the registered mail handler.
+   The ms-outlook: scheme hands off to the desktop client instead of the browser's
+   webmail handler; if nothing claims it we fall back to plain mailto. */
+function openMailDraft(to,subject,body){
+  const qs="subject="+encodeURIComponent(subject)+"&body="+encodeURIComponent(body);
+  const plain="mailto:"+(to||"")+"?"+qs;
+  if(state.settings.mailClassic===false){ window.location.href=plain; return; }
+  let left=true;
+  const back=()=>{ left=false; };
+  window.addEventListener("blur",back,{once:true});
+  window.location.href="ms-outlook://compose?to="+encodeURIComponent(to||"")+"&"+qs;
+  setTimeout(()=>{ if(left && !document.hidden) window.location.href=plain; },700);
+}
+
 /* ---------- Email follow-up templates ---------- */
 function openEmailSheet(id){
   const t=state.tasks.find(x=>x.id===id); const asg=member(t.assignee);
@@ -1964,9 +1998,8 @@ function openEmailSheet(id){
 function sendEmail(id,i){
   const {templates}=window._emailTemplates;
   const t=state.tasks.find(x=>x.id===id); const asg=member(t.assignee); const tp=templates[i];
-  const url=`mailto:${asg.email}?subject=${encodeURIComponent(tp.subject)}&body=${encodeURIComponent(tp.body)}`;
   logAct(t,"email",`Emailed ${asg.name.split(" ")[0]}: "${tp.name}"`); upsertTask(t);
-  window.location.href=url;
+  openMailDraft(asg.email,tp.subject,tp.body);
   closeSheet(); toast("📧 Email drafted"); render();
 }
 
@@ -1981,7 +2014,10 @@ function openMemberSheet(id){
     <div class="sheet-body">
       <div style="display:flex;align-items:center;gap:16px;margin-bottom:18px">
         <div class="m-av" style="width:60px;height:60px;font-size:22px;background:${m.id===myId()?'var(--green)':colorFor(m.id)}">${initials(m.name)}</div>
-        <div><div style="font-weight:800;font-size:19px">${esc(m.name)}</div><div style="color:var(--text-3);font-size:14px">${esc(m.role)}</div>${m.email?`<div style="color:var(--green);font-size:13px;margin-top:2px">${esc(m.email)}</div>`:""}</div>
+        <div style="min-width:0"><div style="font-weight:800;font-size:19px">${esc(m.name)}</div><div style="color:var(--text-3);font-size:14px">${esc(m.role)}</div>
+          ${id==="unassigned"?"":`<div style="margin-top:3px;font-size:13px;word-break:break-all">
+            ${m.email?`<span style="color:var(--green)">${esc(m.email)}</span>`:`<span style="color:var(--hi);font-weight:700">No email address</span>`}
+            <a href="#" onclick="editMemberEmail('${id}');return false" style="margin-left:7px;font-size:12px;font-weight:700">${m.email?"Change":"Add"}</a></div>`}</div>
       </div>
       <div class="ring-card" style="margin-bottom:16px">
         <div class="ring" style="width:88px;height:88px"><svg width="88" height="88"><circle class="rc-bg" cx="44" cy="44" r="${R}" fill="none" stroke-width="8"/><circle class="rc-fg" cx="44" cy="44" r="${R}" fill="none" stroke-width="8" stroke-dasharray="${C}" stroke-dashoffset="${off}"/></svg><div class="rc-num" style="font-size:20px">${s.rate}%</div></div>
