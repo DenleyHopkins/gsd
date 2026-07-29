@@ -665,7 +665,7 @@ input.detail-title:focus{border-bottom:2px solid var(--green);margin-bottom:12px
 
 /* ---------- Constants / seed data ---------- */
 const CONTEXTS = ["Sales","Operations","Admin","Personal","Finance","Marketing"];
-const APP_VERSION = "v1.9.5";
+const APP_VERSION = "v1.10.0";
 const ME = { id:"me-denley", name:"Denley Hopkins", role:"Sales Team Leader", email:"", isMe:true };
 const SEED_MEMBERS = [
   ME,
@@ -2551,6 +2551,7 @@ function graphLocal(str){
    ============================================================ */
 /* No external library: OAuth2 authorization-code + PKCE straight to Microsoft */
 const MS_LS="gsd.msauth";
+const MS_SCOPE="Calendars.Read Calendars.Read.Shared offline_access";
 let _msBusy=false, _msDone={};
 function outlookConfigured(){ return !!(state.settings.msClientId||"").trim(); }
 function msAuthority(){ return "https://login.microsoftonline.com/"+((state.settings.msTenant||"common").trim()||"common"); }
@@ -2567,7 +2568,7 @@ async function outlookConnect(){
     sessionStorage.setItem("gsd.pkce",JSON.stringify({verifier,state:state_}));
     const p=new URLSearchParams({
       client_id:state.settings.msClientId.trim(), response_type:"code", redirect_uri:msRedirect(),
-      response_mode:"query", scope:"Calendars.Read offline_access", state:state_,
+      response_mode:"query", scope:MS_SCOPE, state:state_,
       code_challenge:await pkceChallenge(verifier), code_challenge_method:"S256"
     });
     location.href=msAuthority()+"/oauth2/v2.0/authorize?"+p.toString();
@@ -2589,7 +2590,7 @@ async function msHandleRedirect(){
   }catch(e){ toast("Couldn't finish sign-in: "+(e.message||e)); }
 }
 async function msExchange(extra){
-  const body=new URLSearchParams(Object.assign({ client_id:state.settings.msClientId.trim(), scope:"Calendars.Read offline_access" },extra));
+  const body=new URLSearchParams(Object.assign({ client_id:state.settings.msClientId.trim(), scope:MS_SCOPE },extra));
   const r=await fetch(msAuthority()+"/oauth2/v2.0/token",{ method:"POST", headers:{"Content-Type":"application/x-www-form-urlencoded"}, body });
   const j=await r.json();
   if(!r.ok) throw new Error(j.error_description||j.error||("token "+r.status));
@@ -2608,24 +2609,69 @@ async function msToken(){
 function outlookDisconnect(){
   msStore(null); state.settings.msConnected=false; _msDone={}; save(); closeSheet(); render(); toast("Outlook disconnected");
 }
+/* ---- Which calendars feed the Timesheet ---- */
+let _msCals=null;
+function msSelectedCals(){ return state.settings.msCalIds||[]; }
+async function msFetchCalendars(){
+  const tok=await msToken(); if(!tok) return [];
+  const r=await fetch("https://graph.microsoft.com/v1.0/me/calendars?$select=id,name,isDefaultCalendar,owner&$top=50",{headers:{Authorization:"Bearer "+tok}});
+  if(!r.ok) throw new Error("Graph "+r.status);
+  return (await r.json()).value||[];
+}
+function msToggleCal(id,on){
+  const sel=new Set(msSelectedCals());
+  on?sel.add(id):sel.delete(id);
+  state.settings.msCalIds=[...sel];
+  _msDone={}; save();
+  if(ui.ts&&ui.ts.d) outlookSync(ui.ts.d,true);
+}
+async function msRenderCalList(){
+  const box=$("#msCalList"); if(!box) return;
+  try{
+    _msCals=await msFetchCalendars();
+    if(!_msCals.length){ box.innerHTML='<div style="color:var(--text-3);font-size:13px">No calendars found.</div>'; return; }
+    const sel=msSelectedCals();
+    const none=sel.length===0;
+    box.innerHTML=_msCals.map(c=>{
+      const on=none? !!c.isDefaultCalendar : sel.includes(c.id);
+      const who=(c.owner&&c.owner.name&&!c.isDefaultCalendar)?c.owner.name:"";
+      return `<label style="display:flex;align-items:center;gap:10px;padding:9px 2px;cursor:pointer">
+        <input type="checkbox" ${on?"checked":""} onchange="msToggleCal('${c.id}',this.checked)" style="width:17px;height:17px;accent-color:var(--accent);flex:none">
+        <span style="min-width:0"><span style="display:block;font-size:14px;color:var(--text-1)">${esc(c.name||"Calendar")}</span>
+        ${who?`<span style="display:block;font-size:11.5px;color:var(--text-3)">${esc(who)}</span>`:""}</span>
+      </label>`;
+    }).join("");
+    if(none){ state.settings.msCalIds=_msCals.filter(c=>c.isDefaultCalendar).map(c=>c.id); save(); }
+  }catch(e){ box.innerHTML='<div style="color:var(--text-3);font-size:13px">Couldn\'t load calendars — try reconnecting.</div>'; }
+}
 /* Slot index for a Date (may be negative or beyond TS_SLOTS — the sheet widens) */
 function slotOfDate(d){ return Math.floor(((d.getHours()-TS_START)*60+d.getMinutes())/15); }
-async function outlookSync(date){
+async function outlookSync(date,force){
   if(!outlookConfigured()||!state.settings.msConnected||_msBusy) return;
-  if(_msDone[date] && Date.now()-_msDone[date]<120000) return;
+  if(!force && _msDone[date] && Date.now()-_msDone[date]<120000) return;
   _msBusy=true;
   try{
     const tok=await msToken(); if(!tok){ _msBusy=false; return; }
     const start=new Date(date+"T00:00:00"), end=new Date(date+"T23:59:59");
-    const url=`https://graph.microsoft.com/v1.0/me/calendarview?startDateTime=${start.toISOString()}&endDateTime=${end.toISOString()}&$top=100&$select=subject,start,end,isAllDay,attendees,organizer,responseStatus,isOrganizer`;
-    const r=await fetch(url,{headers:{Authorization:"Bearer "+tok,Prefer:'outlook.timezone="Europe/London"'}});
-    if(!r.ok) throw new Error("Graph "+r.status);
-    const evs=(await r.json()).value||[];
-    const now=Date.now(); let touched=0;
+    const q=`startDateTime=${start.toISOString()}&endDateTime=${end.toISOString()}&$top=100&$select=subject,start,end,isAllDay,attendees,organizer,responseStatus,isOrganizer&$orderby=start/dateTime`;
+    const ids=msSelectedCals();
+    const paths=ids.length? ids.map(id=>({id,url:`https://graph.microsoft.com/v1.0/me/calendars/${encodeURIComponent(id)}/calendarview?`+q}))
+                          : [{id:null,url:"https://graph.microsoft.com/v1.0/me/calendarview?"+q}];
+    const evs=[];
+    for(const p of paths){
+      try{
+        const r=await fetch(p.url,{headers:{Authorization:"Bearer "+tok,Prefer:'outlook.timezone="Europe/London"'}});
+        if(!r.ok) throw new Error("Graph "+r.status);
+        ((await r.json()).value||[]).forEach(ev=>evs.push(ev));
+      }catch(e){ console.warn("Calendar fetch failed",p.id,e); }
+    }
+    evs.sort((a,b)=>String((a.start||{}).dateTime).localeCompare(String((b.start||{}).dateTime)));
+    let touched=0;
     evs.forEach(ev=>{
-      if(ev.isAllDay) return;
+      if(ev.isAllDay||!ev.start||!ev.end) return;
       const resp=((ev.responseStatus||{}).response||"").toLowerCase();
-      if(!(ev.isOrganizer||resp==="accepted"||resp==="organizer")) return;
+      // skip anything you haven't taken on; "none" covers events on a shared calendar
+      if(resp==="declined"||resp==="tentativelyaccepted"||resp==="notresponded") return;
       const s=graphLocal(ev.start.dateTime), e=graphLocal(ev.end.dateTime);
       const sl=slotOfDate(s), el=Math.max(sl+1,slotOfDate(new Date(e.getTime()-1))+1);
       for(let x=sl;x<el;x++){
@@ -2650,11 +2696,15 @@ function openOutlookSettings(){
       <div class="field"><label>Directory (tenant) ID</label><input type="text" id="msTenant" value="${esc(s.msTenant||"common")}" placeholder="common"></div>
       <button class="btn ghost" onclick="saveOutlookCfg()">Save details</button>
       <div style="height:10px"></div>
-      ${s.msConnected
-        ? `<button class="btn ghost" onclick="outlookDisconnect()">Disconnect this device</button>`
+      ${s.msConnected ? `
+        <div style="margin:18px 0 4px"><div style="font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-3);margin-bottom:4px">Calendars to pull in</div>
+        <div id="msCalList" style="color:var(--text-3);font-size:13px">Loading…</div></div>
+        <div style="height:12px"></div>
+        <button class="btn ghost" onclick="outlookDisconnect()">Disconnect this device</button>`
         : `<button class="btn" onclick="outlookConnect()">Connect this device</button>`}
-      <p style="color:var(--text-3);font-size:12px;margin:14px 2px 0;line-height:1.5">Read-only access to your own calendar. Nothing is written back to Outlook.</p>
+      <p style="color:var(--text-3);font-size:12px;margin:14px 2px 0;line-height:1.5">Read-only access. Nothing is written back to Outlook. Shared calendars must be added to your own Outlook first.</p>
     </div>`);
+  if(s.msConnected) setTimeout(msRenderCalList,0);
 }
 function saveOutlookCfg(){
   state.settings.msClientId=$("#msClient").value.trim();
