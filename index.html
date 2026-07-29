@@ -84,12 +84,23 @@ input,select,textarea{font-family:inherit;font-size:16px;color:var(--text)}
 .search svg{width:18px;height:18px;color:var(--text-3);flex-shrink:0}
 .search input{border:none;background:none;outline:none;width:100%;font-size:15px}
 .chips{display:flex;flex-wrap:wrap;gap:6px;padding:8px 18px 4px}
-.st-pie-wrap{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
-.st-pie{position:relative;width:150px;height:150px;flex:0 0 auto}
-.st-pie svg{width:150px;height:150px}
+.st-pie{position:relative;width:100%;max-width:250px;aspect-ratio:1;margin:6px auto 2px}
+.st-pie svg{width:100%;height:100%;display:block;overflow:visible}
+.st-pie circle.st-seg{cursor:pointer;transition:stroke-width .13s,opacity .13s}
+.st-pl{position:absolute;transform:translate(-50%,-50%);font-size:12px;font-weight:800;
+  line-height:1;pointer-events:none;transition:opacity .13s}
 .st-pie-mid{position:absolute;inset:0;display:grid;place-items:center;align-content:center;pointer-events:none}
-.st-pie-mid b{font-size:20px;font-weight:800;line-height:1.1}
-.st-pie-mid span{font-size:11px;color:var(--text-3);font-weight:600}
+.st-pie-mid b{font-size:27px;font-weight:800;line-height:1;letter-spacing:-.03em}
+.st-pie-mid span{font-size:10px;color:var(--text-3);font-weight:700;letter-spacing:.08em;margin-top:4px}
+.st-tip{position:absolute;z-index:5;display:none;pointer-events:none;background:var(--grey);color:#fff;
+  border-radius:10px;padding:7px 10px;box-shadow:0 6px 18px rgba(0,0,0,.22);white-space:nowrap}
+.st-pieleg{display:grid;grid-template-columns:1fr 1fr;gap:7px 14px;margin-top:10px;
+  padding-top:13px;border-top:1px solid var(--line-2)}
+.st-pieleg>div{display:flex;align-items:center;gap:7px;min-width:0;cursor:pointer;transition:opacity .13s}
+.st-pieleg i{width:9px;height:9px;border-radius:3px;flex:0 0 auto}
+.st-pieleg .n{flex:1;min-width:0;font-size:11.5px;font-weight:600;color:var(--text-2);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.st-pieleg .v{font-size:11.5px;font-weight:800;white-space:nowrap}
 .st-legend{flex:1;min-width:190px;display:flex;flex-direction:column;gap:7px}
 .st-leg{display:flex;align-items:center;gap:8px;font-size:12.5px}
 .st-leg i{width:10px;height:10px;border-radius:3px;flex:0 0 auto}
@@ -665,7 +676,7 @@ input.detail-title:focus{border-bottom:2px solid var(--green);margin-bottom:12px
 
 /* ---------- Constants / seed data ---------- */
 const CONTEXTS = ["Sales","Operations","Admin","Personal","Finance","Marketing"];
-const APP_VERSION = "v1.10.0";
+const APP_VERSION = "v1.11.0";
 const ME = { id:"me-denley", name:"Denley Hopkins", role:"Sales Team Leader", email:"", isMe:true };
 const SEED_MEMBERS = [
   ME,
@@ -2995,6 +3006,48 @@ function weekOfMonthIndex(dd){
   const weeks=weeksOfMonth(dd.getFullYear(),dd.getMonth()); const ds=fmtYMD(dd);
   const i=weeks.findIndex(w=>w.days.includes(ds)); return i<0?0:i;
 }
+/* Category donut: hover / tap highlight ------------------------------------ */
+let _stPie=[], _stPieHi=null, _stPieBound=false;
+function pieInk(hex){
+  const lin=v=>{ v/=255; return v<=0.04045 ? v/12.92 : Math.pow((v+0.055)/1.055,2.4); };
+  const lum=x=>0.2126*lin(parseInt(x.slice(1,3),16))+0.7152*lin(parseInt(x.slice(3,5),16))+0.0722*lin(parseInt(x.slice(5,7),16));
+  const ratio=(a,b)=>(Math.max(a,b)+0.05)/(Math.min(a,b)+0.05);
+  const L=lum(hex), dl=lum("#1e1f1a");
+  // pick the ink that actually wins on contrast, not a luminance guess
+  return ratio(dl,L)>ratio(1,L)
+    ? {fg:"#1e1f1a", sh:"0 1px 2px rgba(255,255,255,.45)"}
+    : {fg:"#fff",     sh:"0 1px 3px rgba(0,0,0,.5)"};
+}
+function stPieSet(i){
+  const wrap=document.getElementById("stPie"); if(!wrap) return;
+  _stPieHi=i;
+  const dim=n=>(i===null||n===i)?"1":".32";
+  wrap.querySelectorAll("circle.st-seg").forEach((c,n)=>{
+    c.setAttribute("stroke-width", n===i?"42":"34"); c.style.opacity=dim(n);
+  });
+  wrap.querySelectorAll(".st-pl").forEach((el,n)=>{ el.style.opacity=dim(n); });
+  const leg=document.getElementById("stPieLeg");
+  if(leg) [...leg.children].forEach((el,n)=>{ el.style.opacity=dim(n); });
+  const tip=document.getElementById("stPieTip");
+  if(tip){
+    if(i===null||!_stPie[i]) tip.style.display="none";
+    else{ const s=_stPie[i];
+      tip.style.left=s.txs; tip.style.top=s.tys; tip.style.transform=s.tip; tip.style.display="block";
+      tip.innerHTML=`<div style="display:flex;align-items:center;gap:7px">
+        <i style="width:8px;height:8px;border-radius:2px;flex:none;background:${s.color}"></i>
+        <span style="font-size:12px;font-weight:700;letter-spacing:-.01em">${esc(s.name)}</span></div>
+        <div style="font-size:12.5px;font-weight:800;margin-top:3px;letter-spacing:-.01em">${s.hrs}h · ${s.pct}%</div>`;
+    }
+  }
+  if(!_stPieBound){ _stPieBound=true;
+    // a pointer-down anywhere off a slice clears it — the exit route on touch
+    document.addEventListener("pointerdown",e=>{
+      if(_stPieHi!==null && !(e.target.closest && e.target.closest("[data-slice]"))) stPieSet(null);
+    },true);
+  }
+}
+function stPieTap(i){ stPieSet(_stPieHi===i?null:i); }
+
 function tsStatsHTML(){
   const dates=tsStatsDates(); const A=tsAggregate(dates);
   const mNames=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -3021,26 +3074,47 @@ function tsStatsHTML(){
       <span><i style="background:var(--hi)"></i>Low payoff · ${A.lp.toFixed(2)}h</span>
     </div></div>`;
 
-  // Category breakdown (donut + legend)
-  const R=54, C=2*Math.PI*R; let acc=0;
-  const arcs=catTotal?catRows.map(([c,hh])=>{
-    const frac=hh/catTotal, dash=frac*C, off=-acc*C; acc+=frac;
-    return `<circle cx="70" cy="70" r="${R}" fill="none" stroke="${TS_COLOR[c]}" stroke-width="26"
-      stroke-dasharray="${dash.toFixed(2)} ${(C-dash).toFixed(2)}" stroke-dashoffset="${off.toFixed(2)}"><title>${esc(c)} · ${hh.toFixed(2)}h</title></circle>`;
-  }).join(""):`<circle cx="70" cy="70" r="${R}" fill="none" stroke="var(--line)" stroke-width="26"></circle>`;
-  const catCard=`<div class="st-card"><h3>${esc(periodLabel)} · Category breakdown</h3>
-    <div class="st-pie-wrap">
-      <div class="st-pie">
-        <svg viewBox="0 0 140 140" style="transform:rotate(-90deg);overflow:visible">${arcs}</svg>
-        <div class="st-pie-mid"><b>${catTotal.toFixed(1)}h</b><span>logged</span></div>
-      </div>
-      <div class="st-legend">
-        ${catRows.length?catRows.map(([c,hh])=>{ const pct=catTotal?Math.round(hh/catTotal*100):0;
-          return `<div class="st-leg"><i style="background:${TS_COLOR[c]}"></i><span class="n">${esc(c)}</span><span class="v">${pct}% · ${hh.toFixed(2)}h</span></div>`;
-        }).join(""):'<div style="color:var(--text-3);font-size:13px">Nothing categorised yet</div>'}
-      </div>
+  // Category breakdown — every category on the ring, % inside its slice, hours in the key
+  const PR=78, PC=2*Math.PI*PR, PGAP=3;
+  _stPie=[]; _stPieHi=null;
+  let acc=0;
+  catRows.forEach(([c,hh],i)=>{
+    const frac=hh/catTotal, mid=(acc+frac/2)*2*Math.PI - Math.PI/2;
+    const tx=(110+104*Math.cos(mid))/220*100, ty=(110+104*Math.sin(mid))/220*100;
+    _stPie.push({
+      name:c, color:TS_COLOR[c]||"#999", hrs:hh.toFixed(1), pct:Math.round(frac*100),
+      dash:Math.max(frac*PC-PGAP,1).toFixed(2)+" "+(PC*2).toFixed(2),
+      off:(-acc*PC).toFixed(2),
+      lx:((110+PR*Math.cos(mid))/220*100).toFixed(2)+"%",
+      ly:((110+PR*Math.sin(mid))/220*100).toFixed(2)+"%",
+      label: frac>=0.045 ? Math.round(frac*100)+"%" : "",
+      ink: pieInk(TS_COLOR[c]||"#999"),
+      txs:tx.toFixed(2)+"%", tys:ty.toFixed(2)+"%",
+      tip:"translate("+(tx<32?"0":tx>68?"-100%":"-50%")+","+(ty>55?"12%":"-112%")+")"
+    });
+    acc+=frac;
+  });
+  const arcs=_stPie.map((s,i)=>`<circle class="st-seg" data-slice="1" cx="110" cy="110" r="${PR}" fill="none" stroke-width="34"
+      stroke="${s.color}" stroke-dasharray="${s.dash}" stroke-dashoffset="${s.off}"
+      onmouseenter="stPieSet(${i})" onmouseleave="stPieSet(null)" onpointerdown="stPieTap(${i})"></circle>`).join("");
+  const plabels=_stPie.map(s=>s.label?`<div class="st-pl" style="left:${s.lx};top:${s.ly};color:${s.ink.fg};text-shadow:${s.ink.sh}">${s.label}</div>`:"").join("");
+  const catCard=catRows.length?`<div class="st-card"><h3>${esc(periodLabel)} · Category breakdown</h3>
+    <div style="font-size:12px;color:var(--text-3);font-weight:600">${catTotal.toFixed(1)}h across ${catRows.length} categor${catRows.length===1?"y":"ies"}</div>
+    <div class="st-pie" id="stPie" onmouseleave="stPieSet(null)">
+      <svg viewBox="0 0 220 220"><g transform="rotate(-90 110 110)">
+        <circle cx="110" cy="110" r="${PR}" fill="none" stroke="var(--line-2)" stroke-width="34"></circle>
+        ${arcs}
+      </g></svg>
+      ${plabels}
+      <div class="st-pie-mid"><b>${catTotal.toFixed(1)}h</b><span>LOGGED</span></div>
+      <div class="st-tip" id="stPieTip"></div>
     </div>
-  </div>`;
+    <div class="st-pieleg" id="stPieLeg">
+      ${_stPie.map((s,i)=>`<div data-slice="1" onmouseenter="stPieSet(${i})" onmouseleave="stPieSet(null)" onpointerdown="stPieTap(${i})">
+        <i style="background:${s.color}"></i><span class="n">${esc(s.name)}</span><span class="v">${s.hrs}h</span></div>`).join("")}
+    </div>
+  </div>`:`<div class="st-card"><h3>${esc(periodLabel)} · Category breakdown</h3>
+    <div style="color:var(--text-3);font-size:13px">Nothing categorised yet — tag your time slots on the Day sheet.</div></div>`;
 
   // Per-week stacked
   const weekKeys=Object.keys(A.perWeek).map(Number).sort((a,b)=>a-b);
