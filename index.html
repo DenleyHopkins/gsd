@@ -676,7 +676,7 @@ input.detail-title:focus{border-bottom:2px solid var(--green);margin-bottom:12px
 
 /* ---------- Constants / seed data ---------- */
 const CONTEXTS = ["Sales","Operations","Admin","Personal","Finance","Marketing"];
-const APP_VERSION = "v1.15.0";
+const APP_VERSION = "v1.15.1";
 const ME = { id:"me-denley", name:"Denley Hopkins", role:"Sales Team Leader", email:"denley.hopkins@wilsonscolchester.com", isMe:true };
 const SEED_MEMBERS = [
   ME,
@@ -1974,7 +1974,8 @@ function downloadEmlDraft(to,subject,body){
     "To: "+(to||""),
     "Subject: "+emlEscape(subject),
     "X-Mailer: GSD",
-    'Content-Type: text/plain; charset="utf-8"',
+    'Content-Type: text/plain; charset="utf-8"; format=flowed',
+    "Content-Transfer-Encoding: 8bit",
     "MIME-Version: 1.0",
     "",
     emlEscape(body)
