@@ -676,7 +676,7 @@ input.detail-title:focus{border-bottom:2px solid var(--green);margin-bottom:12px
 
 /* ---------- Constants / seed data ---------- */
 const CONTEXTS = ["Sales","Operations","Admin","Personal","Finance","Marketing"];
-const APP_VERSION = "v1.14.1";
+const APP_VERSION = "v1.15.0";
 const ME = { id:"me-denley", name:"Denley Hopkins", role:"Sales Team Leader", email:"denley.hopkins@wilsonscolchester.com", isMe:true };
 const SEED_MEMBERS = [
   ME,
@@ -1690,6 +1690,11 @@ function renderMore(){
       <div class="lt"><div class="t">Remove duplicates</div><div class="s">Merge same-owner near-matches</div></div>
       <div class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></div>
     </div>
+    <div class="list-row" onclick="openMailSettings()">
+      <div class="lic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg></div>
+      <div class="lt"><div class="t">Email drafts</div><div class="s">${state.settings.mailMode==="eml"?"Draft file \u00b7 opens in Outlook classic":"Default mail app"}</div></div>
+      <div class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></div>
+    </div>
     <div class="list-row" onclick="openOutlookSettings()">
       <div class="lic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></div>
       <div class="lt"><div class="t">Outlook calendar</div><div class="s">${state.settings.msConnected?"Connected \u00b7 meetings fill your Timesheet":outlookConfigured()?"Set up \u2014 tap to connect this device":"Not set up"}</div></div>
@@ -1953,18 +1958,54 @@ function saveMemberEmail(id){
   setTimeout(()=>openMemberSheet(id),220);
 }
 
-/* Drafts open in Outlook classic where it's the registered mail handler.
-   The ms-outlook: scheme hands off to the desktop client instead of the browser's
-   webmail handler; if nothing claims it we fall back to plain mailto. */
+/* Drafts. Two routes, because a browser cannot choose a mail program:
+   "default" hands the OS a mailto: link (whatever owns MAILTO opens it — often new Outlook);
+   "eml"     downloads a draft file, which .eml file association opens — classic Outlook
+             on nearly every setup, even when new Outlook owns mailto. */
+function emlEscape(s){ return String(s||"").replace(/\r?\n/g,"\r\n"); }
 function openMailDraft(to,subject,body){
-  const qs="subject="+encodeURIComponent(subject)+"&body="+encodeURIComponent(body);
-  const plain="mailto:"+(to||"")+"?"+qs;
-  if(state.settings.mailClassic===false){ window.location.href=plain; return; }
-  let left=true;
-  const back=()=>{ left=false; };
-  window.addEventListener("blur",back,{once:true});
-  window.location.href="ms-outlook://compose?to="+encodeURIComponent(to||"")+"&"+qs;
-  setTimeout(()=>{ if(left && !document.hidden) window.location.href=plain; },700);
+  if(state.settings.mailMode==="eml") return downloadEmlDraft(to,subject,body);
+  window.location.href="mailto:"+(to||"")+"?subject="+encodeURIComponent(subject)+"&body="+encodeURIComponent(body);
+}
+function downloadEmlDraft(to,subject,body){
+  // X-Unsent:1 makes Outlook open the file as an editable draft rather than a received message
+  const eml=[
+    "X-Unsent: 1",
+    "To: "+(to||""),
+    "Subject: "+emlEscape(subject),
+    "X-Mailer: GSD",
+    'Content-Type: text/plain; charset="utf-8"',
+    "MIME-Version: 1.0",
+    "",
+    emlEscape(body)
+  ].join("\r\n");
+  const safe=(subject||"draft").replace(/[^\w \-]+/g,"").trim().slice(0,50)||"draft";
+  const url=URL.createObjectURL(new Blob([eml],{type:"message/rfc822"}));
+  const a=document.createElement("a");
+  a.href=url; a.download=safe+".eml";
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),10000);
+  toast("Draft downloaded \u2014 open it to edit in Outlook");
+}
+function setMailMode(v){
+  state.settings.mailMode=v; save(); render();
+  const sheet=$(".sheet-body"); if(sheet) openMailSettings();
+  toast(v==="eml"?"Drafts will download as a file":"Drafts will use your default mail app");
+}
+function openMailSettings(){
+  const eml=state.settings.mailMode==="eml";
+  const opt=(v,title,sub)=>`<div class="list-row" onclick="setMailMode('${v}')" style="cursor:pointer">
+      <div class="lic" style="${(v==="eml")===eml?"background:var(--green);border-color:var(--green);color:#fff":""}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></div>
+      <div class="lt"><div class="t">${title}</div><div class="s">${sub}</div></div>
+    </div>`;
+  openSheet(`<div class="sheet-hd"><h2>Email drafts</h2><button class="sheet-close" onclick="closeSheet()">${X}</button></div>
+    <div class="sheet-body">
+      <p style="color:var(--text-2);font-size:13.5px;margin:0 2px 14px;line-height:1.55">Windows decides which program opens an email link, and new Outlook usually claims it. If your drafts keep landing in new Outlook, switch to the draft file — Windows opens <b>.eml</b> files in Outlook classic even when new Outlook owns mail links.</p>
+      ${opt("default","Default mail app","Opens a new message straight away")}
+      ${opt("eml","Download a draft file","One extra tap \u2014 opens in Outlook classic")}
+      <p style="color:var(--text-3);font-size:12px;margin:14px 2px 0;line-height:1.5">Set per device. With the draft file, your browser may ask you to keep the download the first time.</p>
+    </div>`);
 }
 
 /* ---------- Email follow-up templates ---------- */
