@@ -676,7 +676,7 @@ input.detail-title:focus{border-bottom:2px solid var(--green);margin-bottom:12px
 
 /* ---------- Constants / seed data ---------- */
 const CONTEXTS = ["Sales","Operations","Admin","Personal","Finance","Marketing"];
-const APP_VERSION = "v1.11.0";
+const APP_VERSION = "v1.12.1";
 const ME = { id:"me-denley", name:"Denley Hopkins", role:"Sales Team Leader", email:"", isMe:true };
 const SEED_MEMBERS = [
   ME,
@@ -2775,6 +2775,20 @@ function tsSave(e){
 }
 const MTG_RE=/\b(mtg|mtgs|mtng|meet|meets|meeting|meetings|meetng|meetin|catch[- ]?up|1[-: ]?2[-: ]?1|one[- ]?to[- ]?one|appt|appointment|visit|site visit|review|workshop|briefing|huddle)\b/i;
 function looksLikeMeeting(txt){ return MTG_RE.test(txt||""); }
+/* Recall: the categories you last used for this same wording, on any earlier day.
+   Matches Plan or Actual text, ignores case/spacing, newest day wins. */
+function tsRecallCats(txt,date){
+  const key=(txt||"").trim().toLowerCase().replace(/\s+/g," ");
+  if(key.length<3) return null;
+  const me=myId(); let best=null;
+  Object.values(state.timesheet).forEach(o=>{
+    if(o.user!==me||o.date===date||!(o.cats&&o.cats.length)) return;
+    const hit=[o.plan,o.actual].some(v=>(v||"").trim().toLowerCase().replace(/\s+/g," ")===key);
+    if(!hit) return;
+    if(!best||o.date>best.date||(o.date===best.date&&(o.updatedAt||"")>(best.updatedAt||""))) best=o;
+  });
+  return best?best.cats.slice():null;
+}
 function tsText(date,slot,field,val){
   const {e}=tsEnsure(date,slot); e[field]=val;
   if(field==="plan") e.planTaskId=null;
@@ -2784,13 +2798,20 @@ function tsText(date,slot,field,val){
     if(!(val||"").trim()) e[flag]=true; else delete e[flag];
   }
   if(field==="actual"){
-    const auto=e.autoCat;
-    if(looksLikeMeeting(val)){
-      if(!e.cats||!e.cats.length){
-        e.cats=["Meeting / Team Discussion"]; e.autoCat=e.cats[0]; tsPaintCats(e);
+    const auto=e.autoCat?[e.autoCat]:(e.autoCats||null);
+    const same=a=>a && (e.cats||[]).length===a.length && a.every(c=>(e.cats||[]).includes(c));
+    const mine=(e.cats||[]).length && !same(auto);   // you set these by hand — never touch them
+    const recall=tsRecallCats(val,date);
+    if(recall){
+      if(!mine && !same(recall)){
+        e.cats=recall; e.autoCats=recall.slice(); delete e.autoCat; tsPaintCats(e);
       }
-    } else if(auto && (e.cats||[]).length===1 && e.cats[0]===auto){
-      e.cats=[]; delete e.autoCat; tsPaintCats(e);   // word removed — take the auto tag back off
+    } else if(looksLikeMeeting(val)){
+      if(!e.cats||!e.cats.length||same(auto)){
+        e.cats=["Meeting / Team Discussion"]; e.autoCat=e.cats[0]; delete e.autoCats; tsPaintCats(e);
+      }
+    } else if(same(auto)){
+      e.cats=[]; delete e.autoCat; delete e.autoCats; tsPaintCats(e);  // wording gone — take the auto tags back off
     }
   }
   tsSave(e);
@@ -2942,7 +2963,7 @@ function openTSBlock(date,slot){
 }
 function tsClearCats(date,slot){
   const {e}=tsEnsure(date,slot);
-  e.cats=[]; delete e.autoCat; tsSave(e);
+  e.cats=[]; delete e.autoCat; delete e.autoCats; tsSave(e);
   document.querySelectorAll(".catgrid .catchip").forEach(b=>{ b.classList.remove("on"); b.style.background=""; b.style.borderColor=""; });
   const cl=$("#tsClearCats"); if(cl) cl.style.display="none";
   toast("Categories cleared");
@@ -2952,7 +2973,7 @@ function tsToggleCat(date,slot,cat,btn){
   const i=e.cats.indexOf(cat); const col=TS_COLOR[cat]||"#999";
   if(i>=0){ e.cats.splice(i,1); btn.classList.remove("on"); btn.style.background=""; btn.style.borderColor=""; }
   else { e.cats.push(cat); btn.classList.add("on"); btn.style.background=col; btn.style.borderColor=col; }
-  delete e.autoCat;
+  delete e.autoCat; delete e.autoCats;
   const cl=$("#tsClearCats"); if(cl) cl.style.display=e.cats.length?"":"none";
   tsSave(e);
 }
