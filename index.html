@@ -113,6 +113,36 @@ input,select,textarea{font-family:inherit;font-size:16px;color:var(--text)}
 .filtbtn.on{background:var(--grey);color:#fff}
 .filtbtn .fdot{background:var(--green);color:#fff;border-radius:9px;padding:1px 6px;font-size:11px;font-weight:800}
 .chips.people{padding-top:2px}
+
+/* ---------- Calendar ---------- */
+.calbtn{display:grid;place-items:center;background:var(--surface);box-shadow:var(--shadow);border-radius:14px;
+  width:40px;height:40px;color:var(--text-2);flex:0 0 auto}
+.calbtn svg{width:18px;height:18px;stroke-width:2}
+.calbtn.on{background:var(--green);color:#fff}
+.cal{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);padding:12px 10px 10px;margin-bottom:14px}
+.cal-hd{display:flex;align-items:center;gap:8px;padding:0 4px 10px}
+.cal-hd .m{flex:1;font-size:16px;font-weight:800;letter-spacing:-.02em}
+.cal-nav{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;background:var(--bg-2,rgba(0,0,0,.04));color:var(--text-2)}
+.cal-nav svg{width:16px;height:16px;stroke-width:2.5}
+.cal-today{font-size:12px;font-weight:800;color:var(--green);padding:6px 10px;border-radius:10px}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.cal-dow{font-size:10.5px;font-weight:800;color:var(--text-3);text-align:center;padding-bottom:4px;letter-spacing:.04em}
+.cal-d{aspect-ratio:1/1;border-radius:11px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:3px;font-size:13px;font-weight:700;color:var(--text-1);position:relative;transition:.12s}
+.cal-d.out{color:var(--text-3);opacity:.45}
+.cal-d.today{color:var(--green);font-weight:900}
+.cal-d.today:after{content:"";position:absolute;inset:2px;border:1.5px solid var(--green);border-radius:11px}
+.cal-d.sel{background:var(--grey);color:#fff!important}
+.cal-d.sel:after{border-color:transparent}
+.cal-dots{display:flex;gap:2.5px;align-items:center;height:6px}
+.cal-dots i{width:5px;height:5px;border-radius:50%;display:block}
+.cal-dots b{font-size:9px;font-weight:800;color:var(--text-3);line-height:1}
+.cal-d.sel .cal-dots b{color:rgba(255,255,255,.8)}
+.cal-legend{display:flex;gap:12px;justify-content:center;padding:10px 4px 2px;font-size:11px;font-weight:700;color:var(--text-3)}
+.cal-legend span{display:flex;align-items:center;gap:5px}
+.cal-legend i{width:6px;height:6px;border-radius:50%}
+.cal-addbtn{width:100%;padding:12px;border-radius:14px;background:var(--surface);box-shadow:var(--shadow);
+  font-size:13.5px;font-weight:700;color:var(--text-2);margin-bottom:10px}
 .chips .chip{flex:0 0 auto}
 .chip.mail{background:var(--green);color:#fff;display:flex;align-items:center;gap:6px}
 .chip.mail svg{width:13px;height:13px}
@@ -613,6 +643,9 @@ input.detail-title:focus{border-bottom:2px solid var(--green);margin-bottom:12px
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5h18M6 12h12M10 19h4"/></svg>
         <span id="filtLabel">Filter</span>
       </button>
+      <button class="calbtn" id="calBtn" onclick="toggleCalendar()" title="Calendar view">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+      </button>
     </div>
     <div class="chips" id="ctxChips"></div>
     <div class="chips people" id="personChips"></div>
@@ -676,7 +709,7 @@ input.detail-title:focus{border-bottom:2px solid var(--green);margin-bottom:12px
 
 /* ---------- Constants / seed data ---------- */
 const CONTEXTS = ["Sales","Operations","Admin","Personal","Finance","Marketing"];
-const APP_VERSION = "v1.17.0";
+const APP_VERSION = "v1.18.0";
 const ME = { id:"me-denley", name:"Denley Hopkins", role:"Sales Team Leader", email:"denley.hopkins@wilsonscolchester.com", isMe:true };
 const SEED_MEMBERS = [
   ME,
@@ -718,7 +751,8 @@ let state = {
   }
 };
 let ui = { view:"today", ctx:"All", person:"All", sel:null, trayOpen:false, search:"", editingId:null, detailId:null, sb:null, syncing:false, lastSync:null,
-  mode:"tasks", ts:{ sub:"sheet", y:0, m:0, w:0, d:"", statsLevel:"month", evening:false } };
+  mode:"tasks", cal:{ on:false, ym:null, day:null },
+  ts:{ sub:"sheet", y:0, m:0, w:0, d:"", statsLevel:"month", evening:false } };
 
 /* ---------- Utilities ---------- */
 const $ = s => document.querySelector(s);
@@ -1008,7 +1042,10 @@ function render(){
   const showList=["all","today","overdue"].includes(ui.view);
   $("#listControls").style.display=showList?"block":"none";
   $("#briefingMount").innerHTML="";
-  if(showList){ renderBriefing(); c.innerHTML=""; c.appendChild(renderList()); }
+  if(showList){
+    renderBriefing(); c.innerHTML="";
+    c.appendChild(ui.cal.on ? renderCalendar() : renderList());
+  }
   else if(ui.view==="team") c.innerHTML=renderTeam();
   else if(ui.view==="more") c.innerHTML=renderMore();
   setHeader();
@@ -1052,6 +1089,12 @@ function renderChips(){
     wrap.appendChild(chip);
   });
   renderPeopleChips(); updateFilterBtn();
+}
+function toggleCalendar(){
+  ui.cal.on=!ui.cal.on;
+  if(ui.cal.on){ if(!ui.cal.ym) ui.cal.ym=todayStr().slice(0,7); ui.cal.day=ui.cal.day||todayStr(); }
+  const b=$("#calBtn"); if(b) b.classList.toggle("on",ui.cal.on);
+  render(); window.scrollTo(0,0);
 }
 function toggleFilters(){
   const lc=$("#listControls"); lc.classList.toggle("collapsed"); updateFilterBtn();
@@ -1277,6 +1320,85 @@ function renderList(){
     frag.appendChild(h);
     done.forEach(t=>frag.appendChild(taskCard(t)));
   }
+  return frag;
+}
+/* ---------- Calendar view ---------- */
+function calTasks(){
+  let list=vis().filter(t=>t.dueDate);
+  if(ui.view==="all" && ui.person!=="All") list=list.filter(t=>ui.person==="unassigned"?isUnassigned(t):t.assignee===ui.person);
+  if(ui.view==="today"){ const me=myId(); list=list.filter(t=>t.assignee===me); }
+  else if(ui.view==="overdue") list=list.filter(isOverdue);
+  if(ui.ctx!=="All") list=list.filter(t=>t.context===ui.ctx);
+  if(ui.search){ const q=ui.search.toLowerCase();
+    list=list.filter(t=>t.title.toLowerCase().includes(q)||(t.notes||"").toLowerCase().includes(q)); }
+  return list;
+}
+function shiftMonth(n){
+  const [y,m]=ui.cal.ym.split("-").map(Number);
+  const d=new Date(y,m-1+n,1);
+  ui.cal.ym=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");
+  render();
+}
+function renderCalendar(){
+  const frag=document.createDocumentFragment();
+  const today=todayStr();
+  if(!ui.cal.ym) ui.cal.ym=today.slice(0,7);
+  const [y,m]=ui.cal.ym.split("-").map(Number);
+  const byDay={};
+  calTasks().forEach(t=>{ (byDay[t.dueDate]=byDay[t.dueDate]||[]).push(t); });
+
+  const cal=el("div","cal");
+  const monthName=new Date(y,m-1,1).toLocaleDateString(undefined,{month:"long",year:"numeric"});
+  const hd=el("div","cal-hd",`
+    <button class="cal-nav" data-mv="-1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <div class="m">${esc(monthName)}</div>
+    <button class="cal-today" data-now="1">Today</button>
+    <button class="cal-nav" data-mv="1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 18l6-6-6-6"/></svg></button>`);
+  hd.querySelectorAll("[data-mv]").forEach(b=>b.onclick=()=>shiftMonth(+b.dataset.mv));
+  hd.querySelector("[data-now]").onclick=()=>{ ui.cal.ym=today.slice(0,7); ui.cal.day=today; render(); };
+  cal.appendChild(hd);
+
+  const grid=el("div","cal-grid");
+  ["M","T","W","T","F","S","S"].forEach(d=>grid.appendChild(el("div","cal-dow",d)));
+  const first=new Date(y,m-1,1);
+  const lead=(first.getDay()+6)%7;             // Monday-first
+  const start=new Date(y,m-1,1-lead);
+  for(let i=0;i<42;i++){
+    const d=new Date(start.getFullYear(),start.getMonth(),start.getDate()+i);
+    const iso=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+    const items=(byDay[iso]||[]);
+    const openItems=items.filter(t=>t.status!=="done");
+    const cls="cal-d"+(d.getMonth()!==m-1?" out":"")+(iso===today?" today":"")+(iso===ui.cal.day?" sel":"");
+    const cell=el("button",cls);
+    const dots=openItems.slice(0,3).map(t=>{
+      const col = (iso<today) ? "var(--hi)" : t.priority==="High" ? "var(--hi)" : t.priority==="Low" ? "var(--lo)" : "var(--mid)";
+      return `<i style="background:${col}"></i>`;
+    }).join("");
+    const extra=openItems.length>3?`<b>+${openItems.length-3}</b>`:"";
+    const allDone=items.length&&!openItems.length;
+    cell.innerHTML=`<span>${d.getDate()}</span><span class="cal-dots">${dots}${extra}${allDone?'<i style="background:var(--text-3);opacity:.5"></i>':""}</span>`;
+    cell.onclick=()=>{ ui.cal.day=iso; if(d.getMonth()!==m-1) ui.cal.ym=iso.slice(0,7); render(); };
+    grid.appendChild(cell);
+  }
+  cal.appendChild(grid);
+  cal.appendChild(el("div","cal-legend",
+    '<span><i style="background:var(--hi)"></i>Overdue / High</span><span><i style="background:var(--mid)"></i>Normal</span><span><i style="background:var(--lo)"></i>Low</span>'));
+  frag.appendChild(cal);
+
+  const day=ui.cal.day||today;
+  const list=(byDay[day]||[]).slice().sort((a,b)=>{
+    if((a.status==="done")!==(b.status==="done")) return a.status==="done"?1:-1;
+    const p={High:0,Normal:1,Low:2}; return p[a.priority]-p[b.priority];
+  });
+  const dLabel=new Date(day).toLocaleDateString(undefined,{weekday:"long",day:"numeric",month:"long"});
+  frag.appendChild(el("div","section-h",`<h2>${esc(dLabel)}${day===today?" · today":""}</h2><span class="count">${list.length}</span>`));
+  if(list.length) list.forEach(t=>frag.appendChild(taskCard(t)));
+  else frag.appendChild(el("div","empty",
+    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+     <h3>Nothing due</h3><p>No actions land on this day.</p>`));
+  const add=el("button","cal-addbtn","+ Add an action due "+(day===today?"today":new Date(day).toLocaleDateString(undefined,{day:"numeric",month:"short"})));
+  add.onclick=()=>openEditor(null,{dueDate:day});
+  frag.appendChild(add);
   return frag;
 }
 function taskCard(t){
@@ -1898,8 +2020,8 @@ function recChanged(elm){
 }
 
 /* ---------- Task editor ---------- */
-function openEditor(id){
-  const t = id ? state.tasks.find(x=>x.id===id) : {title:"",context:"Sales",priority:"Normal",dueDate:"",assignee:"me-denley",notes:"",recur:"none"};
+function openEditor(id,prefill){
+  const t = id ? state.tasks.find(x=>x.id===id) : Object.assign({title:"",context:"Sales",priority:"Normal",dueDate:"",assignee:myId(),notes:"",recur:"none"},prefill||{});
   ui.editingId=id; ui.recDraft=t.recurCfg||null;
   const memberOpts=state.members.map(m=>`<option value="${m.id}" ${t.assignee===m.id?"selected":""}>${esc(m.name)}${m.id===myId()?" (me)":""}</option>`).join("")+`<option value="unassigned" ${t.assignee==="unassigned"?"selected":""}>Unassigned</option>`;
   const ctxOpts=CONTEXTS.map(c=>`<option ${t.context===c?"selected":""}>${c}</option>`).join("");
