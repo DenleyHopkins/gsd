@@ -702,6 +702,17 @@ input.detail-title:focus{border-bottom:2px solid var(--green);margin-bottom:12px
 <div class="bulkbar" id="bulkbar"></div>
 
 <script>
+/* Silent Microsoft re-auth callback: this page is loaded inside a hidden iframe.
+   Hand the query string to the parent and do nothing else. */
+window.__msSilent = false;
+try{
+  if(window.top!==window.self && /[?&](code|error)=/.test(location.search)){
+    window.__msSilent = true;
+    parent.postMessage({gsdMsAuth:location.search},location.origin);
+  }
+}catch(e){}
+</script>
+<script>
 /* ============================================================
    GSD — Get Stuff Done  |  single-file PWA
    ============================================================ */
@@ -709,7 +720,7 @@ input.detail-title:focus{border-bottom:2px solid var(--green);margin-bottom:12px
 
 /* ---------- Constants / seed data ---------- */
 const CONTEXTS = ["Sales","Operations","Admin","Personal","Finance","Marketing"];
-const APP_VERSION = "v1.18.0";
+const APP_VERSION = "v1.18.1";
 const ME = { id:"me-denley", name:"Denley Hopkins", role:"Sales Team Leader", email:"denley.hopkins@wilsonscolchester.com", isMe:true };
 const SEED_MEMBERS = [
   ME,
@@ -746,7 +757,7 @@ let state = {
   settings: {
     theme:"light", supabaseUrl:"", supabaseKey:"",
     milestonesSeen:[], briefingDismissed:"", focusDuration:25, currentUserId:"me-denley",
-    msClientId:"", msTenant:"common", msConnected:false,
+    msClientId:"", msTenant:"common", msConnected:false, msAccount:"",
     anthropicKey:"", anthropicModel:"claude-3-5-haiku-latest"
   }
 };
@@ -2916,7 +2927,7 @@ async function msHandleRedirect(){
   if(!pk || pk.state!==st){ toast("Sign-in didn't match this device \u2014 try again"); return; }
   try{
     const tok=await msExchange({ grant_type:"authorization_code", code, redirect_uri:msRedirect(), code_verifier:pk.verifier });
-    if(tok){ state.settings.msConnected=true; save(); render(); toast("Outlook calendar connected"); outlookSync(ui.ts.d||todayStr()); }
+    if(tok){ state.settings.msConnected=true; msStartKeepAlive(); save(); render(); toast("Outlook calendar connected"); outlookSync(ui.ts.d||todayStr()); }
   }catch(e){ toast("Couldn't finish sign-in: "+(e.message||e)); }
 }
 async function msExchange(extra){
@@ -2927,14 +2938,76 @@ async function msExchange(extra){
   msStore({ at:j.access_token, exp:Date.now()+(j.expires_in||3600)*1000, rt:j.refresh_token||(msRead()||{}).rt });
   return j.access_token;
 }
+/* Silent re-authorisation.
+   Microsoft gives single-page apps refresh tokens that die after 24 hours, so a tab
+   left open overnight always wakes up with nothing usable. Rather than sending you
+   back through the consent screen, ask Microsoft for a fresh code in a hidden iframe
+   with prompt=none — your existing browser session answers it without any UI. */
+let _msSilentBusy=null;
+function msSilentAuth(){
+  if(_msSilentBusy) return _msSilentBusy;
+  _msSilentBusy=(async()=>{
+    if(!outlookConfigured()) return null;
+    const verifier=randStr(64), state_=randStr(16);
+    const p=new URLSearchParams({
+      client_id:state.settings.msClientId.trim(), response_type:"code",
+      redirect_uri:msRedirect(), response_mode:"query", scope:MS_SCOPE,
+      state:state_, prompt:"none",
+      login_hint:state.settings.msAccount||"",
+      code_challenge:await pkceChallenge(verifier), code_challenge_method:"S256"
+    });
+    const url=msAuthority()+"/oauth2/v2.0/authorize?"+p.toString();
+    const search=await new Promise(res=>{
+      const fr=document.createElement("iframe");
+      fr.style.cssText="position:absolute;width:0;height:0;border:0;left:-9999px";
+      let done=false;
+      const finish=v=>{ if(done) return; done=true;
+        window.removeEventListener("message",onMsg); clearTimeout(timer);
+        try{ fr.remove(); }catch(e){} res(v); };
+      const onMsg=e=>{ if(e.origin===location.origin && e.data && e.data.gsdMsAuth) finish(e.data.gsdMsAuth); };
+      const timer=setTimeout(()=>finish(null),20000);
+      window.addEventListener("message",onMsg);
+      fr.src=url; document.body.appendChild(fr);
+    });
+    if(!search) return null;
+    const q=new URLSearchParams(search);
+    if(q.get("state")!==state_ || !q.get("code")) return null;
+    return await msExchange({ grant_type:"authorization_code", code:q.get("code"),
+      redirect_uri:msRedirect(), code_verifier:verifier });
+  })().catch(()=>null).finally(()=>{ setTimeout(()=>{_msSilentBusy=null;},0); });
+  return _msSilentBusy;
+}
 async function msToken(){
   const s=msRead();
-  if(s && s.at && Date.now()<s.exp-60000) return s.at;
+  if(s && s.at && Date.now()<s.exp-300000) return s.at;   // refresh 5 min early
   if(s && s.rt){
     try{ return await msExchange({ grant_type:"refresh_token", refresh_token:s.rt }); }
-    catch(e){ msStore(null); state.settings.msConnected=false; save(); return null; }
+    catch(e){
+      const msg=String(e.message||e);
+      // network hiccup or Microsoft blip: keep what we have and try again later
+      if(!/invalid_grant|invalid_client|unauthorized_client|expired|revoked|AADSTS7000|AADSTS700/i.test(msg)){
+        return (s.at && Date.now()<s.exp) ? s.at : null;
+      }
+    }
+  }
+  // expired or gone — renew silently before falling back to the consent screen
+  if(state.settings.msConnected){
+    const t=await msSilentAuth();
+    if(t) return t;
+    msStore(null); state.settings.msConnected=false; save();
+    return null;
   }
   return null;
+}
+/* Keep the token warm: refresh on wake and every 30 minutes so an overnight tab
+   never has to ask you for anything. */
+let _msKeepAlive=false;
+function msStartKeepAlive(){
+  if(_msKeepAlive) return; _msKeepAlive=true;
+  const tick=()=>{ if(state.settings.msConnected && navigator.onLine) msToken(); };
+  setInterval(tick,30*60*1000);
+  document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") tick(); });
+  window.addEventListener("online",tick);
 }
 function outlookDisconnect(){
   msStore(null); state.settings.msConnected=false; _msDone={}; save(); closeSheet(); render(); toast("Outlook disconnected");
@@ -2946,7 +3019,11 @@ async function msFetchCalendars(){
   const tok=await msToken(); if(!tok) return [];
   const r=await fetch("https://graph.microsoft.com/v1.0/me/calendars?$select=id,name,isDefaultCalendar,owner&$top=50",{headers:{Authorization:"Bearer "+tok}});
   if(!r.ok) throw new Error("Graph "+r.status);
-  return (await r.json()).value||[];
+  const cals=(await r.json()).value||[];
+  // remember the signed-in address so silent renewal can target the right session
+  const own=(cals.find(c=>c.isDefaultCalendar)||cals[0]||{}).owner;
+  if(own && own.address && state.settings.msAccount!==own.address){ state.settings.msAccount=own.address; save(); }
+  return cals;
 }
 function msToggleCal(id,on){
   const sel=new Set(msSelectedCals());
@@ -3033,6 +3110,7 @@ function openOutlookSettings(){
         <button class="btn ghost" onclick="outlookDisconnect()">Disconnect this device</button>`
         : `<button class="btn" onclick="outlookConnect()">Connect this device</button>`}
       <p style="color:var(--text-3);font-size:12px;margin:14px 2px 0;line-height:1.5">Read-only access. Nothing is written back to Outlook. Shared calendars must be added to your own Outlook first.</p>
+      <p style="color:var(--text-3);font-size:12px;margin:10px 2px 0;line-height:1.5">If Microsoft keeps showing “Approval required”, IT needs to grant admin consent for this app once (Azure &rarr; Enterprise applications &rarr; GSD Timesheet &rarr; Permissions &rarr; Grant admin consent). Until that is done the connection cannot renew itself in the background.</p>
     </div>`);
   if(s.msConnected) setTimeout(msRenderCalList,0);
 }
@@ -3616,8 +3694,10 @@ function setupPWA(){
    BOOT
    ============================================================ */
 function boot(){
+  if(window.__msSilent) return;   // hidden silent-auth iframe: nothing to render
   load(); applyTheme(); renderChips(); render(); setupPWA();
   msHandleRedirect();
+  if(state.settings.msConnected) msStartKeepAlive();
   // auto-sync on load if configured
   if(state.settings.supabaseUrl) setTimeout(startAutoSync,600);
   // periodic re-render for briefing/time-sensitive
