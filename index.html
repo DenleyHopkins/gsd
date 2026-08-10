@@ -720,7 +720,7 @@ try{
 
 /* ---------- Constants / seed data ---------- */
 const CONTEXTS = ["Sales","Operations","Admin","Personal","Finance","Marketing"];
-const APP_VERSION = "v1.18.1";
+const APP_VERSION = "v1.18.2";
 const ME = { id:"me-denley", name:"Denley Hopkins", role:"Sales Team Leader", email:"denley.hopkins@wilsonscolchester.com", isMe:true };
 const SEED_MEMBERS = [
   ME,
@@ -3382,12 +3382,26 @@ function tsSetHP(date,slot,v){
 }
 function openTSTaskPicker(date,slot){
   const me=myId();
-  const list=vis().filter(t=>t.status!=="done").sort((a,b)=>(a.assignee===me?-1:0)-(b.assignee===me?-1:0));
-  const items=list.map(t=>`<button class="ti" onclick="tsLinkTask('${date}',${slot},'${t.id}')"><span class="dot"></span><span class="tt">${esc(t.title)}</span><span class="cx">${esc(t.context||'')}</span></button>`).join("")||'<div class="st-empty">No open tasks to link.</div>';
+  const today=todayStr();
+  const list=vis().filter(t=>t.status!=="done" && t.assignee===me).sort((a,b)=>{
+    const ad=a.dueDate||"", bd=b.dueDate||"";
+    if(!ad!==!bd) return ad?-1:1;            // undated last
+    if(ad!==bd) return ad<bd?-1:1;           // soonest (and overdue) first
+    const p={High:0,Normal:1,Low:2};
+    return (p[a.priority]??1)-(p[b.priority]??1);
+  });
+  const items=list.map(t=>{
+    const due=t.dueDate
+      ? (t.dueDate<today?`<span class="cx" style="color:var(--hi);font-weight:800">overdue</span>`
+        : t.dueDate===today?`<span class="cx" style="color:var(--green);font-weight:800">today</span>`
+        : `<span class="cx">${esc(new Date(t.dueDate).toLocaleDateString(undefined,{day:'numeric',month:'short'}))}</span>`)
+      : `<span class="cx">${esc(t.context||'')}</span>`;
+    return `<button class="ti" onclick="tsLinkTask('${date}',${slot},'${t.id}')"><span class="dot"></span><span class="tt">${esc(t.title)}</span>${due}</button>`;
+  }).join("")||'<div class="st-empty">You have no open tasks to link.</div>';
   openSheet(`
     <div class="sheet-hd"><h2>Link a task</h2><button class="sheet-close" onclick="openTSBlock('${date}',${slot})">${X}</button></div>
     <div class="sheet-body">
-      <p style="color:var(--text-2);font-size:13.5px;margin:0 2px 14px">Pick a task to plan into ${slotLabel(slot)}–${slotLabel(slot+1)}.</p>
+      <p style="color:var(--text-2);font-size:13.5px;margin:0 2px 14px">Your open tasks, soonest due first. Pick one to plan into ${slotLabel(slot)}–${slotLabel(slot+1)}.</p>
       <div class="tasklist">${items}</div>
     </div>`);
 }
