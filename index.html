@@ -407,7 +407,7 @@ input.detail-title:focus{border-bottom:2px solid var(--green);margin-bottom:12px
 .rock .rk-meta{display:flex;align-items:center;gap:10px;margin-top:10px;position:relative;z-index:1}
 .rock .rk-check{width:26px;height:26px;border-radius:50%;border:2px solid rgba(255,255,255,.4);display:grid;place-items:center;flex:none;transition:.15s}
 .rock.done .rk-check{background:var(--green);border-color:var(--green)}
-.rock .rk-check svg{width:14px;height:14px;color:#fff;opacity:0;transition:.15s}
+.rock .rk-check svg{width:14px;height:14px;color:#fff;opacity:.45;transition:.15s}
 .rock.done .rk-check svg{opacity:1}
 .rock-empty{display:flex;align-items:center;gap:12px;border:1.5px dashed var(--line);background:var(--surface-2);
   border-radius:var(--radius);padding:14px 16px;margin:6px 18px 10px;cursor:pointer;transition:.15s}
@@ -416,6 +416,21 @@ input.detail-title:focus{border-bottom:2px solid var(--green);margin-bottom:12px
 .rock-empty .re-ic svg{width:20px;height:20px}
 .rock-empty .re-t{font-size:14.5px;font-weight:800;color:var(--text);letter-spacing:-.01em}
 .rock-empty .re-s{font-size:12.5px;color:var(--text-3);margin-top:1px}
+.rock.miss{background:linear-gradient(135deg,#3a2a28,#231a19)}
+.rock.miss::after{background:rgba(214,69,58,.18)}
+.rock.miss .rk-title{text-decoration:line-through;opacity:.55}
+.rock .rk-btns{display:flex;gap:8px;flex:none}
+.rock .rk-x{width:26px;height:26px;border-radius:50%;border:2px solid rgba(255,255,255,.4);display:grid;place-items:center;flex:none;transition:.15s}
+.rock .rk-x svg{width:13px;height:13px;color:#fff;opacity:.45;transition:.15s}
+.rock.miss .rk-x{background:var(--hi);border-color:var(--hi)}
+.rock.miss .rk-x svg{opacity:1}
+.rk-stat{display:flex;align-items:center;gap:10px;margin:-4px 18px 12px;padding:9px 14px;background:var(--surface);
+  border-radius:14px;box-shadow:var(--shadow)}
+.rk-stat .pct{font-size:15px;font-weight:900;letter-spacing:-.02em;color:var(--text)}
+.rk-stat .lb{font-size:12px;font-weight:700;color:var(--text-3);flex:1}
+.rk-stat .spark{display:flex;gap:3px;align-items:center}
+.rk-stat .spark i{width:7px;height:7px;border-radius:2px;display:block}
+.rk-stat .streak{font-size:11.5px;font-weight:800;color:var(--green);white-space:nowrap}
 
 /* ---------- Recurrence controls ---------- */
 .rec-extra:not(:empty){margin-top:12px}
@@ -720,7 +735,7 @@ try{
 
 /* ---------- Constants / seed data ---------- */
 const CONTEXTS = ["Sales","Operations","Admin","Personal","Finance","Marketing"];
-const APP_VERSION = "v1.18.2";
+const APP_VERSION = "v1.19.1";
 const ME = { id:"me-denley", name:"Denley Hopkins", role:"Sales Team Leader", email:"denley.hopkins@wilsonscolchester.com", isMe:true };
 const SEED_MEMBERS = [
   ME,
@@ -819,6 +834,54 @@ function isToday(t){ return t.status!=="done" && t.dueDate===todayStr(); }
 function completedToday(t){ return t.status==="done" && t.completedAt && t.completedAt.slice(0,10)===todayStr(); }
 /* ---------- Daily Rock ---------- */
 function rockToday(){ const me=myId(); const d=todayStr(); return state.tasks.find(t=>t.assignee===me && t.rock===d); }
+/* Any Rock from a previous day that was never marked gets settled automatically:
+   completed that day = hit, otherwise missed. */
+function resolveRocks(){
+  const d=todayStr(); let changed=false;
+  state.tasks.forEach(t=>{
+    if(!t.rock || t.rock>=d || t.rockResult) return;
+    const hit = t.status==="done" && t.completedAt && t.completedAt.slice(0,10)<=t.rock;
+    t.rockResult = hit?"hit":"miss"; changed=true; upsertTask(t);
+  });
+  return changed;
+}
+function markRock(id,result){
+  const t=state.tasks.find(x=>x.id===id); if(!t) return;
+  const next = (t.rockResult===result) ? "" : result;   // tapping again clears it
+  t.rockResult=next;
+  logAct(t,"edit",next==="miss"?"Daily Rock missed":next==="hit"?"Daily Rock hit":"Daily Rock unmarked");
+  const wantDone = next==="hit";
+  if(t.status==="done" !== wantDone && (next==="hit" || t.status==="done")){
+    upsertTask(t); toggleDone(t.id); return;            // toggleDone saves + renders
+  }
+  upsertTask(t); render();
+}
+/* Hit rate over the last `days` days of Rocks that were actually set. */
+function rockStats(days){
+  const me=myId(), today=todayStr();
+  const from=new Date(); from.setDate(from.getDate()-(days-1));
+  const fromISO=from.getFullYear()+"-"+String(from.getMonth()+1).padStart(2,"0")+"-"+String(from.getDate()).padStart(2,"0");
+  const rocks=state.tasks.filter(t=>t.assignee===me && t.rock && t.rock>=fromISO && t.rock<=today)
+    .sort((a,b)=>a.rock<b.rock?-1:1);
+  const settled=rocks.filter(t=>t.rock<today || t.rockResult);
+  const res=settled.map(t=>(t.rockResult||(t.status==="done"?"hit":"miss")));
+  const hits=res.filter(r=>r==="hit").length;
+  let streak=0;
+  for(let i=res.length-1;i>=0;i--){ if(res[i]==="hit") streak++; else break; }
+  return { total:res.length, hits, streak, recent:res.slice(-14),
+    pct: res.length?Math.round(hits/res.length*100):null };
+}
+function rockStatBar(){
+  const s=rockStats(30);
+  if(!s.total) return null;
+  const c=el("div","rk-stat");
+  const spark=s.recent.map(r=>`<i style="background:${r==="hit"?"var(--green)":"var(--hi)"}"></i>`).join("");
+  c.innerHTML=`<span class="pct">${s.pct}%</span>
+    <span class="lb">Rock hit rate · ${s.hits}/${s.total} last 30 days</span>
+    <span class="spark">${spark}</span>
+    ${s.streak>1?`<span class="streak">🔥 ${s.streak}</span>`:""}`;
+  return c;
+}
 function setRock(id){ const t=state.tasks.find(x=>x.id===id); if(!t) return; const d=todayStr();
   state.tasks.forEach(x=>{ if(x.assignee===t.assignee && x.rock===d && x.id!==id){ x.rock=""; upsertTask(x); } });
   t.rock=d; logAct(t,"edit","Set as Daily Rock"); upsertTask(t); closeSheet(); render(); toast("⛰ Daily Rock set"); }
@@ -900,7 +963,7 @@ function newTask(data){
   const t={
     id:uid(), title:data.title||"Untitled", context:data.context||"Sales",
     priority:data.priority||"Normal", dueDate:data.dueDate||"", assignee:data.assignee||"me-denley",
-    notes:data.notes||"", status:"open", recur:data.recur||"none", recurCfg:data.recurCfg||null, rock:data.rock||"",
+    notes:data.notes||"", status:"open", recur:data.recur||"none", recurCfg:data.recurCfg||null, rock:data.rock||"", rockResult:data.rockResult||"",
     createdAt:nowISO(), completedAt:null, updatedAt:nowISO(), activity:[]
   };
   logAct(t,"create","Task created");
@@ -1272,17 +1335,22 @@ function filteredTasks(){
 }
 function rockCard(t){
   const done=t.status==="done";
-  const c=el("div","rock"+(done?" done":""));
+  const miss=t.rockResult==="miss";
+  const c=el("div","rock"+(done?" done":"")+(miss?" miss":""));
   c.innerHTML=`
     <div class="rk-t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 20h18L14 6l-3 6-2-3-6 11z"/></svg>Daily Rock</div>
     <div class="rk-title">${esc(t.title)}</div>
     <div class="rk-meta">
-      <div class="rk-check" data-rk="${t.id}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><path d="M20 6L9 17l-5-5"/></svg></div>
-      <span style="font-size:12.5px;opacity:.85;font-weight:600">${done?"Done — nice work":"Tap to open · check to complete"}</span>
+      <div class="rk-btns">
+        <div class="rk-check" data-rk="${t.id}" title="Hit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><path d="M20 6L9 17l-5-5"/></svg></div>
+        <div class="rk-x" data-rkx="${t.id}" title="Missed"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><path d="M18 6L6 18M6 6l12 12"/></svg></div>
+      </div>
+      <span style="font-size:12.5px;opacity:.85;font-weight:600">${done?"Hit — nice work":miss?"Missed today":"Tick if you hit it · cross if you didn’t"}</span>
       <button data-swap="1" style="margin-left:auto;font-size:12px;font-weight:700;color:#fff;background:rgba(255,255,255,.14);border:none;padding:6px 11px;border-radius:9px">Change</button>
     </div>`;
   c.querySelector("[data-swap]").onclick=e=>{e.stopPropagation();openRockPicker();};
-  c.querySelector("[data-rk]").onclick=e=>{e.stopPropagation();bump(e.currentTarget);toggleDone(t.id);};
+  c.querySelector("[data-rk]").onclick=e=>{e.stopPropagation();bump(e.currentTarget);markRock(t.id,"hit");};
+  c.querySelector("[data-rkx]").onclick=e=>{e.stopPropagation();bump(e.currentTarget);markRock(t.id,"miss");};
   c.onclick=()=>openDetail(t.id);
   return c;
 }
@@ -1297,7 +1365,11 @@ function rockEmpty(){
 function renderList(){
   const frag=document.createDocumentFragment();
   const rock = ui.view==="today" ? rockToday() : null;
-  if(ui.view==="today") frag.appendChild(rock ? rockCard(rock) : rockEmpty());
+  if(ui.view==="today"){
+    resolveRocks();
+    frag.appendChild(rock ? rockCard(rock) : rockEmpty());
+    const bar=rockStatBar(); if(bar) frag.appendChild(bar);
+  }
   if(ui.view==="all" || ui.view==="today"){
     const tray=renderTray(ui.view==="today"?"mine":"all");
     if(tray) frag.appendChild(tray);
