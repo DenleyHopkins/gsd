@@ -735,7 +735,7 @@ try{
 
 /* ---------- Constants / seed data ---------- */
 const CONTEXTS = ["Sales","Operations","Admin","Personal","Finance","Marketing"];
-const APP_VERSION = "v1.19.1";
+const APP_VERSION = "v1.19.2";
 const ME = { id:"me-denley", name:"Denley Hopkins", role:"Sales Team Leader", email:"denley.hopkins@wilsonscolchester.com", isMe:true };
 const SEED_MEMBERS = [
   ME,
@@ -835,19 +835,30 @@ function completedToday(t){ return t.status==="done" && t.completedAt && t.compl
 /* ---------- Daily Rock ---------- */
 function rockToday(){ const me=myId(); const d=todayStr(); return state.tasks.find(t=>t.assignee===me && t.rock===d); }
 /* Any Rock from a previous day that was never marked gets settled automatically:
-   completed that day = hit, otherwise missed. */
+   completed that day = hit, otherwise missed.
+   Two safeguards: don't settle anything until a sync has landed (otherwise a device
+   that opens first records a miss for work another device already logged), and an
+   automatic miss self-corrects if a completion for that day turns up later. */
+function rockHit(t){ return t.status==="done" && t.completedAt && t.completedAt.slice(0,10)<=t.rock; }
 function resolveRocks(){
   const d=todayStr(); let changed=false;
+  const synced = !state.settings.supabaseUrl || !!ui.lastSync;
   state.tasks.forEach(t=>{
-    if(!t.rock || t.rock>=d || t.rockResult) return;
-    const hit = t.status==="done" && t.completedAt && t.completedAt.slice(0,10)<=t.rock;
-    t.rockResult = hit?"hit":"miss"; changed=true; upsertTask(t);
+    if(!t.rock || t.rock>=d) return;
+    if(t.rockResult==="miss" && t.rockAuto!==false && rockHit(t)){          // late-arriving completion
+      t.rockResult="hit"; t.rockAuto=false; changed=true; upsertTask(t); return;
+    }
+    if(t.rockResult || !synced) return;
+    const hit=rockHit(t);
+    t.rockResult = hit?"hit":"miss"; t.rockAuto = !hit; changed=true; upsertTask(t);
   });
+  if(changed) save();
   return changed;
 }
 function markRock(id,result){
   const t=state.tasks.find(x=>x.id===id); if(!t) return;
   const next = (t.rockResult===result) ? "" : result;   // tapping again clears it
+  t.rockAuto=false;
   t.rockResult=next;
   logAct(t,"edit",next==="miss"?"Daily Rock missed":next==="hit"?"Daily Rock hit":"Daily Rock unmarked");
   const wantDone = next==="hit";
@@ -963,7 +974,7 @@ function newTask(data){
   const t={
     id:uid(), title:data.title||"Untitled", context:data.context||"Sales",
     priority:data.priority||"Normal", dueDate:data.dueDate||"", assignee:data.assignee||"me-denley",
-    notes:data.notes||"", status:"open", recur:data.recur||"none", recurCfg:data.recurCfg||null, rock:data.rock||"", rockResult:data.rockResult||"",
+    notes:data.notes||"", status:"open", recur:data.recur||"none", recurCfg:data.recurCfg||null, rock:data.rock||"", rockResult:data.rockResult||"", rockAuto:false,
     createdAt:nowISO(), completedAt:null, updatedAt:nowISO(), activity:[]
   };
   logAct(t,"create","Task created");
