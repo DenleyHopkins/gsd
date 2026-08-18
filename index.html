@@ -735,7 +735,7 @@ try{
 
 /* ---------- Constants / seed data ---------- */
 const CONTEXTS = ["Sales","Operations","Admin","Personal","Finance","Marketing"];
-const APP_VERSION = "v1.19.2";
+const APP_VERSION = "v1.20.0";
 const ME = { id:"me-denley", name:"Denley Hopkins", role:"Sales Team Leader", email:"denley.hopkins@wilsonscolchester.com", isMe:true };
 const SEED_MEMBERS = [
   ME,
@@ -776,7 +776,7 @@ let state = {
     anthropicKey:"", anthropicModel:"claude-3-5-haiku-latest"
   }
 };
-let ui = { view:"today", ctx:"All", person:"All", sel:null, trayOpen:false, search:"", editingId:null, detailId:null, sb:null, syncing:false, lastSync:null,
+let ui = { view:"today", ctx:[], person:[], sel:null, trayOpen:false, search:"", editingId:null, detailId:null, sb:null, syncing:false, lastSync:null,
   mode:"tasks", cal:{ on:false, ym:null, day:null },
   ts:{ sub:"sheet", y:0, m:0, w:0, d:"", statsLevel:"month", evening:false } };
 
@@ -922,7 +922,7 @@ function addRockTask(){
   const inp=$("#rockNew"); if(!inp) return;
   const title=(inp.value||"").trim(); if(!title){ inp.focus(); return; }
   const t=newTask({ title, dueDate:todayStr(), assignee:myId(), rock:todayStr(),
-    context:(ui.ctx&&ui.ctx!=="All")?ui.ctx:"Sales" });
+    context:(ui.ctx.length===1)?ui.ctx[0]:"Sales" });
   const me=t.assignee, d=todayStr();
   state.tasks.forEach(x=>{ if(x.assignee===me && x.rock===d){ x.rock=""; upsertTask(x); } });
   upsertTask(t); closeSheet(); render(); toast("\u26f0 Daily Rock set");
@@ -1166,11 +1166,16 @@ function updateBadges(){
 }
 
 /* ---------- Chips ---------- */
+/* Filters hold a list of selections; empty means “all”. */
+function toggleIn(arr,v){ return arr.includes(v) ? arr.filter(x=>x!==v) : arr.concat([v]); }
+function matchCtx(t){ return !ui.ctx.length || ui.ctx.includes(t.context); }
+function matchPerson(t){ return !ui.person.length || ui.person.some(p=>p==="unassigned"?isUnassigned(t):t.assignee===p); }
 function renderChips(){
   const wrap=$("#ctxChips"); wrap.innerHTML="";
   ["All",...CONTEXTS].forEach(c=>{
-    const chip=el("button","chip"+(ui.ctx===c?" active":""),c);
-    chip.onclick=()=>{ui.ctx=c;renderChips();render();};
+    const on = c==="All" ? !ui.ctx.length : ui.ctx.includes(c);
+    const chip=el("button","chip"+(on?" active":""),c);
+    chip.onclick=()=>{ ui.ctx = c==="All" ? [] : toggleIn(ui.ctx,c); renderChips(); render(); };
     wrap.appendChild(chip);
   });
   renderPeopleChips(); updateFilterBtn();
@@ -1187,9 +1192,11 @@ function toggleFilters(){
 function updateFilterBtn(){
   const b=$("#filtBtn"), l=$("#filtLabel"); if(!b||!l) return;
   const lc=$("#listControls"); const open=!lc.classList.contains("collapsed");
-  const act=[]; if(ui.ctx&&ui.ctx!=="All") act.push(ui.ctx);
-  if(ui.mode==="tasks"&&ui.view==="all"&&ui.person&&ui.person!=="all"){
-    const m=member(ui.person); act.push(m?m.name.split(" ")[0]:"Person");
+  const act=[];
+  if(ui.ctx.length) act.push(ui.ctx.length>2?ui.ctx.length+" categories":ui.ctx.join(" · "));
+  if(ui.mode==="tasks"&&ui.view==="all"&&ui.person.length){
+    act.push(ui.person.length>2 ? ui.person.length+" people"
+      : ui.person.map(p=>{ const m=member(p); return p==="unassigned"?"Unassigned":(m?m.name.split(" ")[0]:"Person"); }).join(" · "));
   }
   b.classList.toggle("on", open||act.length>0);
   l.textContent = act.length ? act.join(" · ") : "Filter";
@@ -1203,15 +1210,16 @@ function renderPeopleChips(){
   const me=myId();
   const opts=[["All","Everyone"],...state.members.map(m=>[m.id,m.name.split(" ")[0]+(m.id===me?" (me)":"")]),["unassigned","Unassigned"]];
   opts.forEach(([id,label])=>{
-    const chip=el("button","chip"+(ui.person===id?" active":""),label);
-    chip.onclick=()=>{ui.person=id;renderChips();render();};
+    const on = id==="All" ? !ui.person.length : ui.person.includes(id);
+    const chip=el("button","chip"+(on?" active":""),label);
+    chip.onclick=()=>{ ui.person = id==="All" ? [] : toggleIn(ui.person,id); renderChips(); render(); };
     wrap.appendChild(chip);
   });
   updateFilterBtn();
-  if(ui.person!=="All" && ui.person!=="unassigned"){
-    const m=member(ui.person);
+  if(ui.person.length===1 && ui.person[0]!=="unassigned"){
+    const m=member(ui.person[0]);
     const btn=el("button","chip mail",`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z"/><path d="M22 6l-10 7L2 6"/></svg>Email ${esc((m&&m.name.split(" ")[0])||"")}`);
-    btn.onclick=()=>openBulkReminder(ui.person);
+    btn.onclick=()=>openBulkReminder(ui.person[0]);
     wrap.appendChild(btn);
   }
 }
@@ -1336,10 +1344,10 @@ function sendBulkReminder(id){
 /* ---------- List view ---------- */
 function filteredTasks(){
   let list=vis();
-  if(ui.view==="all" && ui.person!=="All") list=list.filter(t=>ui.person==="unassigned"?isUnassigned(t):t.assignee===ui.person);
+  if(ui.view==="all") list=list.filter(matchPerson);
   if(ui.view==="today"){ const me=myId(); list=list.filter(t=>t.assignee===me && (isToday(t)||isOverdue(t)||completedToday(t))); }
   else if(ui.view==="overdue") list=list.filter(isOverdue);
-  if(ui.ctx!=="All") list=list.filter(t=>t.context===ui.ctx);
+  list=list.filter(matchCtx);
   if(ui.search){ const q=ui.search.toLowerCase();
     list=list.filter(t=>t.title.toLowerCase().includes(q)||(t.notes||"").toLowerCase().includes(q)); }
   return list;
@@ -1419,10 +1427,10 @@ function renderList(){
 /* ---------- Calendar view ---------- */
 function calTasks(){
   let list=vis().filter(t=>t.dueDate);
-  if(ui.view==="all" && ui.person!=="All") list=list.filter(t=>ui.person==="unassigned"?isUnassigned(t):t.assignee===ui.person);
+  if(ui.view==="all") list=list.filter(matchPerson);
   if(ui.view==="today"){ const me=myId(); list=list.filter(t=>t.assignee===me); }
   else if(ui.view==="overdue") list=list.filter(isOverdue);
-  if(ui.ctx!=="All") list=list.filter(t=>t.context===ui.ctx);
+  list=list.filter(matchCtx);
   if(ui.search){ const q=ui.search.toLowerCase();
     list=list.filter(t=>t.title.toLowerCase().includes(q)||(t.notes||"").toLowerCase().includes(q)); }
   return list;
