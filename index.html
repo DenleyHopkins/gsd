@@ -572,6 +572,43 @@ input.detail-title:focus{border-bottom:2px solid var(--green);margin-bottom:12px
 .ts-hp.LP{background:var(--hi);color:#fff}
 .ts-tags .add{font-size:15px;color:var(--text-3);font-weight:400;line-height:1}
 
+/* week view */
+.app.wide{max-width:1180px}
+.tsw-bar{display:flex;align-items:center;gap:8px;padding:0 4px 10px;flex-wrap:wrap}
+.tsw-bar .wk{flex:1;font-size:15px;font-weight:800;letter-spacing:-.02em;min-width:150px}
+.tsw-nav{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;background:var(--surface);
+  border:1.5px solid var(--line);color:var(--text-2);flex:none}
+.tsw-nav svg{width:15px;height:15px;stroke-width:2.5}
+.tsw-seg{display:flex;border:1.5px solid var(--line);border-radius:10px;overflow:hidden;flex:none}
+.tsw-seg button{padding:7px 11px;font-size:12px;font-weight:700;color:var(--text-2);background:var(--surface)}
+.tsw-seg button.on{background:var(--grey);color:#fff}
+.tsw-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px}
+.tsw-grid{display:grid;border:1.5px solid var(--line);border-radius:14px;overflow:hidden;background:var(--surface);min-width:640px}
+.tsw-grid>div{border-right:1px solid var(--line-2);border-bottom:1px solid var(--line-2);min-width:0}
+.tsw-hd{background:var(--grey);color:#fff;padding:7px 8px;text-align:center;border-right:1px solid rgba(255,255,255,.14)!important;
+  border-bottom:none!important;position:sticky;top:0;z-index:4}
+.tsw-hd .d{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.04em}
+.tsw-hd .n{font-size:10.5px;font-weight:600;opacity:.72}
+.tsw-hd.today{background:var(--green)}
+.tsw-hd.corner{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;opacity:.8}
+.tsw-t{background:var(--surface-2);font-size:10.5px;font-weight:700;color:var(--text-3);
+  display:flex;align-items:center;justify-content:center}
+.tsw-t.hour{color:var(--text);font-size:11px}
+.tsw-c{position:relative;display:flex;align-items:stretch;min-height:30px}
+.tsw-c.hour{border-top:1.5px solid var(--line)}
+.tsw-c input{width:100%;border:none;background:transparent;padding:4px 16px 4px 7px;font-size:12px;
+  line-height:1.2;outline:none;color:var(--text);min-width:0}
+.tsw-c input::placeholder{color:var(--text-3);font-style:italic;opacity:.75}
+.tsw-c input:focus{background:color-mix(in srgb,var(--green) 12%,transparent)}
+.tsw-c .more{position:absolute;right:1px;top:1px;bottom:1px;width:14px;display:grid;place-items:center;
+  font-size:11px;font-weight:800;color:var(--text-3);line-height:1;opacity:.5}
+.tsw-c .more:hover{opacity:1;color:var(--text)}
+.tsw-c .bar{position:absolute;left:0;top:0;bottom:0;width:3px}
+.tsw-c .dots{position:absolute;right:15px;bottom:2px;display:flex;gap:1.5px;pointer-events:none}
+.tsw-c .dots i{width:5px;height:5px;border-radius:50%;display:block}
+.tsw-foot{display:flex;align-items:center;justify-content:center;gap:6px;padding:6px 4px;
+  background:var(--surface-2);font-size:10.5px;font-weight:800;color:var(--text-2)}
+
 /* block editor + pickers */
 .catgrid{display:flex;flex-wrap:wrap;gap:8px}
 .catchip{display:flex;align-items:center;gap:7px;padding:8px 11px;border-radius:11px;font-size:13px;font-weight:600;
@@ -615,7 +652,7 @@ input.detail-title:focus{border-bottom:2px solid var(--green);margin-bottom:12px
 </style>
 </head>
 <body>
-<div class="app">
+<div class="app" id="app">
   <!-- Header -->
   <header class="hdr">
     <div class="hdr-top">
@@ -735,7 +772,7 @@ try{
 
 /* ---------- Constants / seed data ---------- */
 const CONTEXTS = ["Sales","Operations","Admin","Personal","Finance","Marketing"];
-const APP_VERSION = "v1.20.0";
+const APP_VERSION = "v1.21.1";
 const ME = { id:"me-denley", name:"Denley Hopkins", role:"Sales Team Leader", email:"denley.hopkins@wilsonscolchester.com", isMe:true };
 const SEED_MEMBERS = [
   ME,
@@ -778,7 +815,7 @@ let state = {
 };
 let ui = { view:"today", ctx:[], person:[], sel:null, trayOpen:false, search:"", editingId:null, detailId:null, sb:null, syncing:false, lastSync:null,
   mode:"tasks", cal:{ on:false, ym:null, day:null },
-  ts:{ sub:"sheet", y:0, m:0, w:0, d:"", statsLevel:"month", evening:false } };
+  ts:{ sub:"sheet", days7:false, y:0, m:0, w:0, d:"", statsLevel:"month", evening:false } };
 
 /* ---------- Utilities ---------- */
 const $ = s => document.querySelector(s);
@@ -1113,6 +1150,8 @@ function toast(msg){
    RENDERING
    ============================================================ */
 function render(){
+  const app=$("#app");
+  if(app) app.classList.toggle("wide", ui.mode==="timesheet" && ui.ts.sub==="week");
   updateNav(); updateBadges(); updateModebar(); renderPeopleChips(); updateAvatar(); renderBulkBar();
   const c=$("#content");
   if(ui.mode==="timesheet"){
@@ -3318,8 +3357,10 @@ function tsPaintCats(e){
 /* ---- filter + shell ---- */
 function renderTimesheet(){
   const wrap=el("div","ts-wrap");
-  wrap.innerHTML = tsFilterHTML() + tsSubHTML() + (ui.ts.sub==="stats"?tsStatsHTML():tsSheetHTML());
-  if(ui.ts.sub!=="stats" && ui.ts.d) setTimeout(()=>outlookSync(ui.ts.d),0);
+  const body = ui.ts.sub==="stats" ? tsStatsHTML() : ui.ts.sub==="week" ? tsWeekHTML() : tsSheetHTML();
+  wrap.innerHTML = (ui.ts.sub==="week"?"":tsFilterHTML()) + tsSubHTML() + body;
+  if(ui.ts.sub==="sheet" && ui.ts.d) setTimeout(()=>outlookSync(ui.ts.d),0);
+  if(ui.ts.sub==="week") setTimeout(()=>tsWeekDates().forEach(d=>outlookSync(d)),0);
   return wrap;
 }
 function tsFilterHTML(){
@@ -3352,10 +3393,91 @@ function tsFixDay(){ const weeks=weeksOfMonth(ui.ts.y,ui.ts.m); const wk=weeks[u
 function tsSubHTML(){
   return `<div class="ts-sub">
     <button class="${ui.ts.sub==='sheet'?'active':''}" onclick="tsSetSub('sheet')">Day sheet</button>
+    <button class="${ui.ts.sub==='week'?'active':''}" onclick="tsSetSub('week')">Week</button>
     <button class="${ui.ts.sub==='stats'?'active':''}" onclick="tsSetSub('stats')">Stats</button>
   </div>`;
 }
 function tsSetSub(s){ ui.ts.sub=s; render(); window.scrollTo(0,0); }
+
+/* ---- week view ----
+   Monday-first grid, one column per day, same 15-minute rows as the day sheet.
+   Typing in a cell fills Actual; Plan shows as the greyed placeholder behind it. */
+function tsWeekDates(){
+  const weeks=weeksOfMonth(ui.ts.y,ui.ts.m);
+  const wk=weeks[ui.ts.w]||weeks[0];
+  const mon=new Date((wk?wk.days[0]:todayStr())+"T00:00:00");
+  const out=[]; for(let i=0;i<(ui.ts.days7?7:5);i++){ const d=new Date(mon); d.setDate(mon.getDate()+i); out.push(fmtYMD(d)); }
+  return out;
+}
+function tsWeekShift(n){
+  const mon=new Date(tsWeekDates()[0]+"T00:00:00");
+  mon.setDate(mon.getDate()+7*n);
+  ui.ts.y=mon.getFullYear(); ui.ts.m=mon.getMonth();
+  const weeks=weeksOfMonth(ui.ts.y,ui.ts.m);
+  const key=fmtYMD(mon); let wi=weeks.findIndex(w=>w.days[0]===key);
+  ui.ts.w=wi<0?0:wi; ui.ts.d=key; render();
+}
+function tsWeekToday(){ ui.ts.d=""; ui.ts.y=0; tsInitDate(); render(); }
+function tsWeekDays(n){ ui.ts.days7=(n===7); render(); }
+function tsWeekOpenDay(date){ ui.ts.d=date; ui.ts.sub="sheet"; render(); window.scrollTo(0,0); }
+function tsWeekHTML(){
+  const dates=tsWeekDates(), today=todayStr();
+  let lo=0, hi=TS_SLOTS;
+  dates.forEach(d=>{ const r=tsDayRange(d); lo=Math.min(lo,r.lo); hi=Math.max(hi,r.hi); });
+  const eveningUsed=dates.some(d=>{ for(let s=TS_EVENING;s<hi;s++){ const e=tsGet(d,s); if(e&&(e.plan||e.actual||(e.cats&&e.cats.length)||e.hp)) return true; } return false; });
+  const showEvening=eveningUsed||ui.ts.evening;
+  const lastSlot=showEvening?hi:Math.min(hi,TS_EVENING);
+
+  const cols=`52px repeat(${dates.length},minmax(96px,1fr))`;
+  let cells=`<div class="tsw-hd corner">Time</div>`;
+  dates.forEach(d=>{
+    const dd=new Date(d+"T00:00:00");
+    cells+=`<div class="tsw-hd${d===today?' today':''}" onclick="tsWeekOpenDay('${d}')" style="cursor:pointer">
+      <div class="d">${WDL[dd.getDay()]}</div>
+      <div class="n">${dd.getDate()} ${dd.toLocaleDateString(undefined,{month:'short'})}</div></div>`;
+  });
+  for(let s=lo;s<lastSlot;s++){
+    const hr=(s%4===0);
+    cells+=`<div class="tsw-t${hr?' hour':''}">${hr?slotLabel(s):''}</div>`;
+    dates.forEach(d=>{
+      const e=tsGet(d,s)||{};
+      const cats=e.cats||[];
+      const bar=e.hp?`<span class="bar" style="background:${e.hp==="HP"?"var(--green)":"var(--hi)"}"></span>`
+        : cats.length?`<span class="bar" style="background:${TS_COLOR[cats[0]]||'#999'}"></span>`:"";
+      const dots=cats.length>1?`<span class="dots">${cats.slice(0,3).map(c=>`<i style="background:${TS_COLOR[c]||'#999'}"></i>`).join("")}</span>`:"";
+      cells+=`<div class="tsw-c${hr?' hour':''}">${bar}
+        <input list="tsRecent" value="${esc(e.actual||'')}" placeholder="${esc(e.plan||'')}"
+          oninput="tsText('${d}',${s},'actual',this.value)">${dots}
+        <button class="more" title="Categories, payoff, link a task" onclick="openTSBlock('${d}',${s})">⋮</button>
+      </div>`;
+    });
+  }
+  cells+=`<div class="tsw-foot"></div>`;
+  dates.forEach(d=>{
+    let hp=0,lp=0,filled=0;
+    for(let s=lo;s<lastSlot;s++){ const e=tsGet(d,s); if(!e) continue;
+      if(e.actual||e.plan) filled++;
+      if(e.hp==="HP")hp++; else if(e.hp==="LP")lp++; }
+    const pct=(hp+lp)?Math.round(hp/(hp+lp)*100):null;
+    cells+=`<div class="tsw-foot">${(filled/4).toFixed(filled%4?2:0).replace(/\.00$/,"")}h${pct!==null?` · ${pct}% HP`:""}</div>`;
+  });
+
+  const mon=new Date(dates[0]+"T00:00:00"), end=new Date(dates[dates.length-1]+"T00:00:00");
+  const range=`${mon.getDate()} ${mon.toLocaleDateString(undefined,{month:'short'})} – ${end.getDate()} ${end.toLocaleDateString(undefined,{month:'short',year:'numeric'})}`;
+  return `${tsRecentDatalist()}
+    <div class="tsw-bar">
+      <button class="tsw-nav" onclick="tsWeekShift(-1)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <button class="tsw-nav" onclick="tsWeekShift(1)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 18l6-6-6-6"/></svg></button>
+      <div class="wk">${range}</div>
+      <div class="tsw-seg">
+        <button class="${ui.ts.days7?'':'on'}" onclick="tsWeekDays(5)">Work week</button>
+        <button class="${ui.ts.days7?'on':''}" onclick="tsWeekDays(7)">Full week</button>
+      </div>
+      <button class="tsw-nav" style="width:auto;padding:0 10px;font-size:12px;font-weight:800" onclick="tsWeekToday()">Today</button>
+    </div>
+    <div class="tsw-scroll"><div class="tsw-grid" style="grid-template-columns:${cols}">${cells}</div></div>
+    ${showEvening?"":`<button class="ts-evening" onclick="ui.ts.evening=true;render()">Show evening · 18:00–20:00</button>`}`;
+}
 
 /* ---- day sheet ---- */
 function tsRecentDatalist(){
@@ -3400,7 +3522,10 @@ function tsSheetHTML(){
   return `${tsRecentDatalist()}
     <div class="ts-dayhead">
       <div><div class="dh-day">${WDL[dd.getDay()]}</div><div class="dh-date">${dd.toLocaleDateString(undefined,{day:'numeric',month:'long',year:'numeric'})}</div></div>
-      <div class="dh-hp"><div class="v">${hpPct}%</div><div class="l">High-payoff</div></div>
+      <div style="display:flex;align-items:center;gap:10px">
+        ${date===todayStr()?"":`<button class="tsw-nav" style="width:auto;padding:0 11px;height:34px;font-size:12px;font-weight:800" onclick="tsWeekToday()">Today</button>`}
+        <div class="dh-hp"><div class="v">${hpPct}%</div><div class="l">High-payoff</div></div>
+      </div>
     </div>
     <div class="ts-sheet">
       <div class="ts-colhead"><div>Time</div><div>Plan</div><div>Actual</div><div>Cat</div></div>
