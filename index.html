@@ -611,8 +611,9 @@ input.detail-title:focus{border-bottom:2px solid var(--green);margin-bottom:12px
 .tsw-c .more:hover{opacity:1;color:var(--text)}
 .tsw-c .more:focus-visible{opacity:1;color:#fff;background:var(--green);border-radius:3px;outline:none}
 .tsw-c .bar{position:absolute;left:0;top:0;bottom:0;width:3px}
-.tsw-c .dots{position:absolute;right:15px;bottom:2px;display:flex;gap:1.5px;pointer-events:none}
-.tsw-c .dots i{width:5px;height:5px;border-radius:50%;display:block}
+.tsw-c .dots{position:absolute;right:15px;bottom:1.5px;display:flex;align-items:center;gap:2px;pointer-events:none}
+.tsw-c .dots i{width:6px;height:6px;border-radius:50%;display:block;box-shadow:0 0 0 1px var(--surface)}
+.tsw-c .dots b{font-size:8px;font-weight:800;color:var(--text-3);line-height:1}
 .tsw-foot{display:flex;align-items:center;justify-content:center;gap:6px;padding:6px 4px;
   background:var(--surface-2);font-size:10.5px;font-weight:800;color:var(--text-2)}
 
@@ -779,7 +780,7 @@ try{
 
 /* ---------- Constants / seed data ---------- */
 const CONTEXTS = ["Sales","Operations","Admin","Personal","Finance","Marketing"];
-const APP_VERSION = "v1.24.1";
+const APP_VERSION = "v1.25.0";
 const ME = { id:"me-denley", name:"Denley Hopkins", role:"Sales Team Leader", email:"denley.hopkins@wilsonscolchester.com", isMe:true };
 const SEED_MEMBERS = [
   ME,
@@ -3512,9 +3513,10 @@ function tsWeekHTML(){
       const cats=e.cats||[];
       const bar=e.hp?`<span class="bar" style="background:${e.hp==="HP"?"var(--green)":"var(--hi)"}"></span>`
         : cats.length?`<span class="bar" style="background:${TS_COLOR[cats[0]]||'#999'}"></span>`:"";
-      const dots=cats.length>1?`<span class="dots">${cats.slice(0,3).map(c=>`<i style="background:${TS_COLOR[c]||'#999'}"></i>`).join("")}</span>`:"";
+      const dots=cats.length?`<span class="dots">${cats.slice(0,4).map(c=>`<i style="background:${TS_COLOR[c]||'#999'}"></i>`).join("")}${cats.length>4?`<b>+${cats.length-4}</b>`:""}</span>`:"";
       const isNow = d===now.date && s===now.slot;
-      cells+=`<div class="tsw-c${hr?' hour':''}${isNow?' nowslot nowline':''}">${bar}
+      const tip=[cats.join(" · "),e.hp==="HP"?"High payoff":e.hp==="LP"?"Low payoff":""].filter(Boolean).join(" — ");
+      cells+=`<div class="tsw-c${hr?' hour':''}${isNow?' nowslot nowline':''}"${tip?` title="${esc(tip)}"`:""}>${bar}
         <input list="tsRecent" data-d="${d}" data-s="${s}" value="${esc(e.actual||'')}" placeholder="${esc(e.plan||'')}"
           oninput="tsText('${d}',${s},'actual',this.value)" onkeydown="tswKey(event,'${d}',${s})"
           oncontextmenu="tsAdoptPlan(event,'${d}',${s})">${dots}
