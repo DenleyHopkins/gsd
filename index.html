@@ -122,13 +122,13 @@ input,select,textarea{font-family:inherit;font-size:16px;color:var(--text)}
 .cal{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);padding:12px 10px 10px;margin-bottom:14px}
 .cal-hd{display:flex;align-items:center;gap:8px;padding:0 4px 10px}
 .cal-hd .m{flex:1;font-size:16px;font-weight:800;letter-spacing:-.02em}
-.cal-nav{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;background:var(--bg-2,rgba(0,0,0,.04));color:var(--text-2)}
+.cal-nav{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;background:var(--surface-2);color:var(--text-2)}
 .cal-nav svg{width:16px;height:16px;stroke-width:2.5}
 .cal-today{font-size:12px;font-weight:800;color:var(--green);padding:6px 10px;border-radius:10px}
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
 .cal-dow{font-size:10.5px;font-weight:800;color:var(--text-3);text-align:center;padding-bottom:4px;letter-spacing:.04em}
 .cal-d{aspect-ratio:1/1;border-radius:11px;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  gap:3px;font-size:13px;font-weight:700;color:var(--text-1);position:relative;transition:.12s}
+  gap:3px;font-size:13px;font-weight:700;color:var(--text);position:relative;transition:.12s}
 .cal-d.out{color:var(--text-3);opacity:.45}
 .cal-d.today{color:var(--green);font-weight:900}
 .cal-d.today:after{content:"";position:absolute;inset:2px;border:1.5px solid var(--green);border-radius:11px}
@@ -555,6 +555,12 @@ input.detail-title:focus{border-bottom:2px solid var(--green);margin-bottom:12px
 .ts-colhead>div:last-child{border-right:none}
 .ts-row{border-top:1px solid var(--line-2);min-height:40px}
 .ts-row.hourstart{border-top:1.5px solid var(--line)}
+.ts-row.nowslot{background:color-mix(in srgb,var(--green) 9%,transparent)}
+.ts-row.nowslot .ts-time{background:var(--green);color:#fff}
+.ts-row.nowline{border-top:2px solid var(--hi)!important}
+.tsw-c.nowslot{background:color-mix(in srgb,var(--green) 9%,transparent)}
+.tsw-t.nowslot{background:var(--green);color:#fff!important}
+.tsw-c.nowline,.tsw-t.nowline{border-top:2px solid var(--hi)!important}
 .ts-row>div{border-right:1px solid var(--line-2);display:flex;align-items:center}
 .ts-row>div:last-child{border-right:none}
 .ts-time{justify-content:center;font-size:11px;font-weight:700;color:var(--text-2);background:var(--surface-2)}
@@ -603,6 +609,7 @@ input.detail-title:focus{border-bottom:2px solid var(--green);margin-bottom:12px
 .tsw-c .more{position:absolute;right:1px;top:1px;bottom:1px;width:14px;display:grid;place-items:center;
   font-size:11px;font-weight:800;color:var(--text-3);line-height:1;opacity:.5}
 .tsw-c .more:hover{opacity:1;color:var(--text)}
+.tsw-c .more:focus-visible{opacity:1;color:#fff;background:var(--green);border-radius:3px;outline:none}
 .tsw-c .bar{position:absolute;left:0;top:0;bottom:0;width:3px}
 .tsw-c .dots{position:absolute;right:15px;bottom:2px;display:flex;gap:1.5px;pointer-events:none}
 .tsw-c .dots i{width:5px;height:5px;border-radius:50%;display:block}
@@ -772,7 +779,7 @@ try{
 
 /* ---------- Constants / seed data ---------- */
 const CONTEXTS = ["Sales","Operations","Admin","Personal","Finance","Marketing"];
-const APP_VERSION = "v1.21.1";
+const APP_VERSION = "v1.24.1";
 const ME = { id:"me-denley", name:"Denley Hopkins", role:"Sales Team Leader", email:"denley.hopkins@wilsonscolchester.com", isMe:true };
 const SEED_MEMBERS = [
   ME,
@@ -2083,10 +2090,26 @@ function renderMore(){
    SHEETS
    ============================================================ */
 function openSheet(html){
+  // remember the field you came from so Esc can put the cursor back
+  const a=document.activeElement;
+  _sheetReturn = (a && (a.tagName==="INPUT"||a.tagName==="BUTTON") && a.dataset.d)
+    ? { d:a.dataset.d, s:a.dataset.s } : null;
   $("#sheetContent").innerHTML='<div id="sheetInner">'+html+'</div>';
   $("#scrim").classList.add("show"); $("#sheet").classList.add("show");
 }
-function closeSheet(){ $("#scrim").classList.remove("show"); $("#sheet").classList.remove("show"); ui.editingId=null; ui.detailId=null; stopFocus(); render(); }
+function closeSheet(){ $("#scrim").classList.remove("show"); $("#sheet").classList.remove("show"); ui.editingId=null; ui.detailId=null; stopFocus(); render(); restoreSheetFocus(); }
+let _sheetReturn=null;
+function restoreSheetFocus(){
+  const r=_sheetReturn; _sheetReturn=null; if(!r) return;
+  requestAnimationFrame(()=>{
+    const inp=document.querySelector(`.tsw-c input[data-d="${r.d}"][data-s="${r.s}"]`);
+    if(inp){ inp.focus(); inp.setSelectionRange(inp.value.length,inp.value.length); }
+  });
+}
+document.addEventListener("keydown",e=>{
+  if(e.key!=="Escape") return;
+  if($("#sheet") && $("#sheet").classList.contains("show")){ e.preventDefault(); closeSheet(); }
+});
 function segSel(btn){ btn.parentNode.querySelectorAll("button").forEach(b=>b.classList.remove("sel")); btn.classList.add("sel"); }
 function updateField(id,key,val){
   const t=state.tasks.find(x=>x.id===id); if(!t) return;
@@ -2171,7 +2194,7 @@ function openEditor(id,prefill){
   openSheet(`
     <div class="sheet-hd"><h2>${id?"Edit task":"New task"}</h2><button class="sheet-close" onclick="closeSheet()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>
     <div class="sheet-body">
-      <div class="field"><label>Title</label><input type="text" id="f-title" value="${esc(t.title)}" placeholder="What needs doing?" autofocus></div>
+      <div class="field"><label>Title</label><input type="text" id="f-title" value="${esc(t.title)}" placeholder="What needs doing?"></div>
       <div class="field"><label>Priority</label>
         <div class="seg" id="f-prio">
           ${["High","Normal","Low"].map(p=>`<button data-p="${p}" class="${t.priority===p?"sel":""}">${p}</button>`).join("")}
@@ -2193,6 +2216,7 @@ function openEditor(id,prefill){
     b.classList.add("sel"); sel=b.dataset.p; $("#sheetInner").dataset.prio=sel;
   });
   $("#sheetInner").dataset.prio=t.priority;
+  setTimeout(()=>{ const i=$("#f-title"); if(i){ i.focus(); i.setSelectionRange(i.value.length,i.value.length); } },120);
 }
 function saveEditor(){
   const title=$("#f-title").value.trim();
@@ -3173,8 +3197,8 @@ async function msRenderCalList(){
       const on=none? !!c.isDefaultCalendar : sel.includes(c.id);
       const who=(c.owner&&c.owner.name&&!c.isDefaultCalendar)?c.owner.name:"";
       return `<label style="display:flex;align-items:center;gap:10px;padding:9px 2px;cursor:pointer">
-        <input type="checkbox" ${on?"checked":""} onchange="msToggleCal('${c.id}',this.checked)" style="width:17px;height:17px;accent-color:var(--accent);flex:none">
-        <span style="min-width:0"><span style="display:block;font-size:14px;color:var(--text-1)">${esc(c.name||"Calendar")}</span>
+        <input type="checkbox" ${on?"checked":""} onchange="msToggleCal('${c.id}',this.checked)" style="width:17px;height:17px;accent-color:var(--green);flex:none">
+        <span style="min-width:0"><span style="display:block;font-size:14px;color:var(--text)">${esc(c.name||"Calendar")}</span>
         ${who?`<span style="display:block;font-size:11.5px;color:var(--text-3)">${esc(who)}</span>`:""}</span>
       </label>`;
     }).join("");
@@ -3390,6 +3414,44 @@ function tsFilter(k,v){
   render();
 }
 function tsFixDay(){ const weeks=weeksOfMonth(ui.ts.y,ui.ts.m); const wk=weeks[ui.ts.w]||weeks[0]; if(wk&&!wk.days.includes(ui.ts.d)) ui.ts.d=wk.days[0]; }
+/* Current 15-minute block, for the Outlook-style “now” marker. */
+function nowSlot(){ const d=new Date(); return { date:fmtYMD(d), slot:slotOfDate(d) }; }
+/* Keep the marker on the right row as time passes. */
+let _nowKey="";
+setInterval(()=>{
+  const n=nowSlot(), k=n.date+"|"+n.slot;
+  if(k===_nowKey) return; _nowKey=k;
+  if(ui.mode==="timesheet" && ui.ts.sub!=="stats" && !document.querySelector(".sheet.open")
+     && !(document.activeElement&&document.activeElement.tagName==="INPUT")) render();
+},30000);
+/* Right-click a slot with a plan but no actual: copy the plan across and categorise it. */
+function tsAdoptPlan(ev,date,slot){
+  const e=tsGet(date,slot);
+  if(!e||!(e.plan||"").trim()) return;      // nothing planned — let the browser menu through
+  ev.preventDefault();
+  if(!(e.actual||"").trim()){
+    tsText(date,slot,"actual",e.plan);
+    render();
+  }
+  openTSBlock(date,slot);
+}
+/* Week view: Tab/Enter walks down the day instead of across to the next date. */
+function tswKey(ev,date,slot){
+  const cell=sel=>document.querySelector(`.tsw-c ${sel}[data-d="${date}"][data-s="${slot}"]`);
+  // Tab steps through this cell's categorise button, then on down the column
+  if(ev.key==="Tab" && !ev.shiftKey && ev.target.tagName==="INPUT"){
+    const more=cell("button"); if(more){ ev.preventDefault(); more.focus(); return; }
+  }
+  const down = ev.key==="Enter" || (ev.key==="Tab" && !ev.shiftKey) || ev.key==="ArrowDown";
+  const up   = ev.key==="ArrowUp" || (ev.key==="Tab" && ev.shiftKey);
+  if(!down && !up) return;
+  if(up && ev.key==="Tab" && ev.target.tagName==="BUTTON"){
+    const inp=cell("input"); if(inp){ ev.preventDefault(); inp.focus(); inp.select(); return; }
+  }
+  const next=document.querySelector(`.tsw-c input[data-d="${date}"][data-s="${slot+(down?1:-1)}"]`);
+  if(!next) return;
+  ev.preventDefault(); next.focus(); next.select();
+}
 function tsSubHTML(){
   return `<div class="ts-sub">
     <button class="${ui.ts.sub==='sheet'?'active':''}" onclick="tsSetSub('sheet')">Day sheet</button>
@@ -3400,17 +3462,21 @@ function tsSubHTML(){
 function tsSetSub(s){ ui.ts.sub=s; render(); window.scrollTo(0,0); }
 
 /* ---- week view ----
-   Monday-first grid, one column per day, same 15-minute rows as the day sheet.
-   Typing in a cell fills Actual; Plan shows as the greyed placeholder behind it. */
+   Work week runs Mon–Fri; the full week starts on Sunday. Same 15-minute rows as
+   the day sheet. Typing in a cell fills Actual; Plan shows as the greyed placeholder. */
 function tsWeekDates(){
   const weeks=weeksOfMonth(ui.ts.y,ui.ts.m);
   const wk=weeks[ui.ts.w]||weeks[0];
   const mon=new Date((wk?wk.days[0]:todayStr())+"T00:00:00");
-  const out=[]; for(let i=0;i<(ui.ts.days7?7:5);i++){ const d=new Date(mon); d.setDate(mon.getDate()+i); out.push(fmtYMD(d)); }
+  const start=new Date(mon);
+  if(ui.ts.days7) start.setDate(mon.getDate()-1);        // back to Sunday
+  const out=[]; for(let i=0;i<(ui.ts.days7?7:5);i++){ const d=new Date(start); d.setDate(start.getDate()+i); out.push(fmtYMD(d)); }
   return out;
 }
 function tsWeekShift(n){
-  const mon=new Date(tsWeekDates()[0]+"T00:00:00");
+  const first=new Date(tsWeekDates()[0]+"T00:00:00");
+  const mon=new Date(first);
+  if(ui.ts.days7) mon.setDate(first.getDate()+1);        // Sunday-start back to its Monday
   mon.setDate(mon.getDate()+7*n);
   ui.ts.y=mon.getFullYear(); ui.ts.m=mon.getMonth();
   const weeks=weeksOfMonth(ui.ts.y,ui.ts.m);
@@ -3436,19 +3502,23 @@ function tsWeekHTML(){
       <div class="d">${WDL[dd.getDay()]}</div>
       <div class="n">${dd.getDate()} ${dd.toLocaleDateString(undefined,{month:'short'})}</div></div>`;
   });
+  const now=nowSlot();
   for(let s=lo;s<lastSlot;s++){
     const hr=(s%4===0);
-    cells+=`<div class="tsw-t${hr?' hour':''}">${hr?slotLabel(s):''}</div>`;
+    const tCls=`tsw-t${hr?' hour':''}${dates.includes(now.date)&&s===now.slot?' nowslot nowline':''}`;
+    cells+=`<div class="${tCls}">${hr?slotLabel(s):''}</div>`;
     dates.forEach(d=>{
       const e=tsGet(d,s)||{};
       const cats=e.cats||[];
       const bar=e.hp?`<span class="bar" style="background:${e.hp==="HP"?"var(--green)":"var(--hi)"}"></span>`
         : cats.length?`<span class="bar" style="background:${TS_COLOR[cats[0]]||'#999'}"></span>`:"";
       const dots=cats.length>1?`<span class="dots">${cats.slice(0,3).map(c=>`<i style="background:${TS_COLOR[c]||'#999'}"></i>`).join("")}</span>`:"";
-      cells+=`<div class="tsw-c${hr?' hour':''}">${bar}
-        <input list="tsRecent" value="${esc(e.actual||'')}" placeholder="${esc(e.plan||'')}"
-          oninput="tsText('${d}',${s},'actual',this.value)">${dots}
-        <button class="more" title="Categories, payoff, link a task" onclick="openTSBlock('${d}',${s})">⋮</button>
+      const isNow = d===now.date && s===now.slot;
+      cells+=`<div class="tsw-c${hr?' hour':''}${isNow?' nowslot nowline':''}">${bar}
+        <input list="tsRecent" data-d="${d}" data-s="${s}" value="${esc(e.actual||'')}" placeholder="${esc(e.plan||'')}"
+          oninput="tsText('${d}',${s},'actual',this.value)" onkeydown="tswKey(event,'${d}',${s})"
+          oncontextmenu="tsAdoptPlan(event,'${d}',${s})">${dots}
+        <button class="more" data-d="${d}" data-s="${s}" title="Categories, payoff, link a task" onclick="openTSBlock('${d}',${s})" onkeydown="tswKey(event,'${d}',${s})">⋮</button>
       </div>`;
     });
   }
@@ -3509,13 +3579,13 @@ function tsSheetHTML(){
     const dots=(e.cats||[]).map(c=>`<i style="background:${TS_COLOR[c]||'#999'}"></i>`).join("");
     const hpBadge=e.hp?`<span class="ts-hp ${e.hp}">${e.hp}</span>`:"";
     const tagInner=(dots||hpBadge)?`<div class="ts-dots">${dots}</div>${hpBadge}`:`<span class="add">+</span>`;
-    rows+=`<div class="ts-row${hs?' hourstart':''}">
+    rows+=`<div class="ts-row${hs?' hourstart':''}${date===nowSlot().date&&s===nowSlot().slot?' nowslot nowline':''}">
       <div class="ts-time">${slotLabel(s)}</div>
       <div class="ts-plan${linked?' linked':''}">
         ${linked?'<svg class="lk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg>':''}
         <input class="ts-in" list="tsRecent" value="${esc(e.plan||'')}" oninput="tsText('${date}',${s},'plan',this.value)">
       </div>
-      <div><input class="ts-in" list="tsRecent" value="${esc(e.actual||'')}" oninput="tsText('${date}',${s},'actual',this.value)"></div>
+      <div><input class="ts-in" list="tsRecent" data-s="${s}" value="${esc(e.actual||'')}" oninput="tsText('${date}',${s},'actual',this.value)" oncontextmenu="tsAdoptPlan(event,'${date}',${s})"></div>
       <div class="ts-tags" onclick="openTSBlock('${date}',${s})">${tagInner}</div>
     </div>`;
   }
@@ -3537,6 +3607,9 @@ function tsSheetHTML(){
 /* ---- block editor ---- */
 function openTSBlock(date,slot){
   const {e}=tsEnsure(date,slot);
+  const fromWeek = ui.ts.sub==="week";
+  if(fromWeek) setTimeout(()=>{ const i=$("#tsb-actual");
+    if(i){ i.focus(); i.setSelectionRange(i.value.length,i.value.length); } },140);
   const chips=TS_CATS.map(([c,col])=>{
     const on=(e.cats||[]).includes(c);
     return `<button class="catchip${on?' on':''}" style="${on?`background:${col};border-color:${col}`:''}" onclick="tsToggleCat('${date}',${slot},this.dataset.c,this)" data-c="${esc(c)}"><i style="background:${col}"></i>${esc(c)}</button>`;
@@ -3553,7 +3626,7 @@ function openTSBlock(date,slot){
         <div id="tsb-linked" style="${linked?'':'display:none;'}margin-top:8px;font-size:12.5px;color:var(--green);font-weight:700">↳ ${linked?esc(linked.title):''}</div>
       </div>
       <div class="field"><label>Actual</label>
-        <input type="text" list="tsRecent" value="${esc(e.actual||'')}" placeholder="What actually happened" oninput="tsText('${date}',${slot},'actual',this.value)">
+        <input type="text" id="tsb-actual" list="tsRecent" value="${esc(e.actual||'')}" placeholder="What actually happened" oninput="tsText('${date}',${slot},'actual',this.value)">
       </div>
       <div class="field">
         <label style="display:flex;align-items:center;justify-content:space-between;gap:10px">
