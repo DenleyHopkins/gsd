@@ -532,6 +532,102 @@ input.detail-title:focus{border-bottom:2px solid var(--green);margin-bottom:12px
 .modebar .mt svg{width:17px;height:17px;stroke-width:2}
 .modebar .mt.active{background:var(--grey);color:#fff;border-color:var(--grey)}
 
+/* ---------- Goals ---------- */
+.g-wrap{padding:0 12px 20px}
+.g-card,.g-panel{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px;margin-bottom:10px}
+.g-card{cursor:pointer}
+.g-panel h3{margin:0 0 10px;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--text-2)}
+.g-top{display:flex;align-items:flex-start;gap:10px}
+.g-type{font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3);margin-bottom:2px}
+.g-title{font-size:15.5px;font-weight:700;letter-spacing:-.01em;word-break:break-word}
+.g-stars{color:var(--mid);font-size:13px;letter-spacing:1px;white-space:nowrap}
+.g-stars .off{color:var(--line)}
+.g-bar{height:6px;border-radius:4px;background:var(--line-2);overflow:hidden;margin-top:10px}
+.g-bar i{display:block;height:100%;background:var(--green);border-radius:4px;transition:width .2s}
+.g-meta{display:flex;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--text-2);font-weight:600;margin-top:8px}
+.g-next{font-size:12.5px;color:var(--text-2);margin-top:6px;font-weight:600}
+.g-kids{margin-top:10px;display:flex;flex-direction:column;gap:6px}
+.g-kid{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;background:var(--surface-2);font-size:13px;font-weight:600;cursor:pointer}
+.g-kid .pc{margin-left:auto;font-size:12px;color:var(--text-3);font-weight:800}
+.g-add{display:flex;gap:8px;padding:0 4px 4px}
+.g-add button{flex:1;padding:12px;border-radius:14px;background:var(--surface);box-shadow:var(--shadow);font-size:13.5px;font-weight:700;color:var(--text-2)}
+.g-2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
+.g-starsel{display:flex;gap:2px}
+.g-starsel button{font-size:26px;line-height:1;color:var(--line);padding:6px 3px}
+.g-starsel button.on{color:var(--mid)}
+.g-prog{display:flex;align-items:center;gap:10px}
+.g-prog b{font-size:14px;font-weight:800;min-width:42px;text-align:right}
+.field input[type=range]{width:100%;accent-color:var(--green);margin-top:8px}
+.field label.g-auto{display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-weight:600;font-size:13px;margin:6px 0 0;color:var(--text-2)}
+.g-step{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line-2)}
+.g-step .sb{flex:1;min-width:0}
+.g-step .st{border:none;background:transparent;padding:0;font:inherit;font-size:14px;font-weight:600;width:100%;color:var(--text);outline:none;word-break:break-word}
+.g-step .sd{font-size:11.5px;color:var(--text-3);font-weight:600;margin-top:2px}
+.g-step.done .st{text-decoration:line-through;color:var(--text-2)}
+.g-step.done .check{background:var(--green);border-color:var(--green)}
+.g-step.done .check svg{opacity:1}
+.field .g-step input[type=date]{width:128px;padding:7px 8px;font-size:12.5px;flex:none}
+.g-step .del{width:28px;height:28px;border-radius:50%;color:var(--text-3);display:grid;place-items:center;flex:none}
+.g-step .del svg{width:14px;height:14px}
+.g-stepadd{display:flex;gap:6px;margin-top:10px}
+.field .g-stepadd input[type=text]{flex:1;min-width:0}
+.field .g-stepadd input[type=date]{width:140px;flex:none;padding:13px 8px}
+.g-stepadd button{padding:0 16px;border-radius:12px;background:var(--green);color:#fff;font-weight:800;font-size:14px;flex:none}
+.field select.g-link{margin-top:8px}
+.g-none{font-size:13px;color:var(--text-3);padding:4px 2px}
+.g-nav{display:flex;align-items:center;gap:8px;padding:0 4px 12px}
+.g-nav .t{flex:1;font-size:16px;font-weight:800;letter-spacing:-.02em;text-align:center}
+.g-hint{font-size:12px;color:var(--text-3);padding:0 6px 10px;font-weight:600;line-height:1.5}
+.g-qs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:12px}
+@media(max-width:620px){.g-qs{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.g-q{background:var(--surface-2);border-radius:10px;padding:8px;min-height:64px;border:1.5px solid transparent}
+.g-q.now{border-color:var(--green)}
+.g-q h4{margin:0 0 6px;font-size:10.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--text-3)}
+.g-q.now h4{color:var(--green)}
+.g-chip{display:block;width:100%;text-align:left;font-size:12px;font-weight:700;padding:6px 8px;border-radius:8px;background:var(--surface);box-shadow:var(--shadow);margin-bottom:5px;word-break:break-word;color:var(--text)}
+.g-chip .b{display:block;height:3px;border-radius:2px;background:var(--line-2);margin-top:5px;overflow:hidden}
+.g-chip .b i{display:block;height:100%;background:var(--green)}
+.g-q .stp{font-size:11.5px;color:var(--text-2);padding:2px 0;font-weight:600;word-break:break-word}
+.g-q .stp.done{text-decoration:line-through;opacity:.6}
+.g-q .none,.g-wk .none{font-size:12px;color:var(--text-3)}
+.g-chips{display:flex;gap:6px;flex-wrap:wrap;padding:0 4px 12px}
+.g-wk{display:grid;grid-template-columns:96px minmax(0,1fr);gap:10px;padding:9px 8px;border-top:1px solid var(--line-2);margin:0 -8px}
+.g-wk.now{background:color-mix(in oklch,var(--green) 12%,transparent);border-radius:10px;border-top-color:transparent}
+.g-wk .wl{font-size:12.5px;font-weight:800}
+.g-wk.now .wl{color:var(--green-d)}
+.g-wk .g-wdate{font-size:11px;color:var(--text-3);font-weight:600}
+.g-act{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;padding:3px 0}
+.g-act .ck{width:18px;height:18px;border-radius:50%;border:2px solid var(--line);flex:none;display:grid;place-items:center;background:var(--surface)}
+.g-act .ck svg{width:10px;height:10px;color:#fff;opacity:0}
+.g-act.done .ck{background:var(--green);border-color:var(--green)}
+.g-act.done .ck svg{opacity:1}
+.g-act .tx{min-width:0;word-break:break-word;cursor:pointer}
+.g-act.done .tx{text-decoration:line-through;color:var(--text-3)}
+.g-act .tag{font-size:9.5px;font-weight:800;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;border:1px solid var(--line);border-radius:5px;padding:1px 4px;flex:none}
+.g-act .dd{margin-left:auto;font-size:11px;color:var(--text-3);font-weight:700;white-space:nowrap}
+.g-ta{width:100%;min-height:70px;padding:12px;border-radius:12px;border:1.5px solid var(--line);background:var(--surface-2);resize:vertical;font:inherit;font-size:14.5px;line-height:1.5;outline:none;color:var(--text)}
+.g-ta:focus,.g-hab input:focus{border-color:var(--green);background:var(--surface)}
+.g-fh{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.g-fh h3{margin:0;flex:1}
+.g-fs{font-size:12px;font-weight:700;color:var(--text-3)}
+.g-focus.hit .g-fs{color:var(--green)}
+.g-focus.miss .g-fs{color:var(--hi)}
+.g-fk{width:32px;height:32px;border-radius:50%;border:2px solid var(--line);background:var(--surface);display:grid;place-items:center;color:var(--text-3);flex:none;transition:.15s}
+.g-fk svg{width:15px;height:15px;stroke-width:3.5}
+.g-fk.hit.on{background:var(--green);border-color:var(--green);color:#fff}
+.g-fk.miss.on{background:var(--hi);border-color:var(--hi);color:#fff}
+.g-focus.hit{box-shadow:inset 3px 0 0 var(--green),var(--shadow)}
+.g-focus.miss{box-shadow:inset 3px 0 0 var(--hi),var(--shadow)}
+.g-hab{padding:10px 0;border-top:1px solid var(--line-2)}
+.g-hab:first-of-type{border-top:none;padding-top:0}
+.g-hab input{width:100%;padding:10px 12px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface-2);font:inherit;font-size:14px;font-weight:600;outline:none;color:var(--text)}
+.g-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr)) 38px;gap:5px;margin-top:8px;align-items:center}
+.g-days .dk{height:34px;border-radius:9px;border:1.5px solid var(--line);background:var(--surface-2);font-size:12px;font-weight:800;color:var(--text-3);display:grid;place-items:center}
+.g-days .dk.today{border-color:var(--green);color:var(--green)}
+.g-days .dk.on{background:var(--green);border-color:var(--green);color:#fff}
+.g-days .dk svg{width:14px;height:14px}
+.g-days .n{font-size:12px;font-weight:800;color:var(--text-3);text-align:right}
+
 /* ---------- Timesheet ---------- */
 .ts-wrap{padding:0 12px 20px}
 .ts-filter{display:flex;gap:6px;flex-wrap:wrap;padding:8px 4px 12px;position:sticky;top:0;background:var(--bg);z-index:5}
@@ -690,6 +786,10 @@ input.detail-title:focus{border-bottom:2px solid var(--green);margin-bottom:12px
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18M8 2v4M16 2v4M8 14h4"/></svg>
       Timesheet
     </button>
+    <button class="mt" data-mode="goals">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>
+      Goals
+    </button>
   </div>
 
   <!-- Search + chips (list views only) -->
@@ -780,7 +880,7 @@ try{
 
 /* ---------- Constants / seed data ---------- */
 const CONTEXTS = ["Sales","Operations","Admin","Personal","Finance","Marketing"];
-const APP_VERSION = "v1.25.0";
+const APP_VERSION = "v1.26.2";
 const ME = { id:"me-denley", name:"Denley Hopkins", role:"Sales Team Leader", email:"denley.hopkins@wilsonscolchester.com", isMe:true };
 const SEED_MEMBERS = [
   ME,
@@ -813,6 +913,7 @@ let state = {
   members: [],
   timesheet: {},
   ideas: [],
+  goals: [],
   tombstones: {},
   settings: {
     theme:"light", supabaseUrl:"", supabaseKey:"",
@@ -823,6 +924,7 @@ let state = {
 };
 let ui = { view:"today", ctx:[], person:[], sel:null, trayOpen:false, search:"", editingId:null, detailId:null, sb:null, syncing:false, lastSync:null,
   mode:"tasks", cal:{ on:false, ym:null, day:null },
+  g:{ sub:"list", year:new Date().getFullYear(), sprint:"", wk:"" },
   ts:{ sub:"sheet", days7:false, y:0, m:0, w:0, d:"", statsLevel:"month", evening:false } };
 
 /* ---------- Utilities ---------- */
@@ -999,7 +1101,7 @@ function save(){ localStorage.setItem(LS, JSON.stringify(state)); }
 function load(){
   try{
     const raw=localStorage.getItem(LS);
-    if(raw){ const p=JSON.parse(raw); state.tasks=p.tasks||[]; state.members=p.members||[]; state.timesheet=p.timesheet||{}; state.ideas=p.ideas||[]; state.tombstones=p.tombstones||{}; state.settings={...state.settings,...(p.settings||{})}; }
+    if(raw){ const p=JSON.parse(raw); state.tasks=p.tasks||[]; state.members=p.members||[]; state.timesheet=p.timesheet||{}; state.ideas=p.ideas||[]; state.goals=p.goals||[]; state.tombstones=p.tombstones||{}; state.settings={...state.settings,...(p.settings||{})}; }
   }catch(e){ console.warn("load failed",e); }
   if(!state.members.length) state.members = SEED_MEMBERS.map(m=>({...m}));
   else { // ensure "me" always present & updated
@@ -1159,9 +1261,17 @@ function toast(msg){
    ============================================================ */
 function render(){
   const app=$("#app");
-  if(app) app.classList.toggle("wide", ui.mode==="timesheet" && ui.ts.sub==="week");
+  if(app) app.classList.toggle("wide", (ui.mode==="timesheet" && ui.ts.sub==="week") || (ui.mode==="goals" && ui.g.sub==="year"));
   updateNav(); updateBadges(); updateModebar(); renderPeopleChips(); updateAvatar(); renderBulkBar();
   const c=$("#content");
+  if(ui.mode==="goals"){
+    $("#listControls").style.display="none";
+    $("#briefingMount").innerHTML="";
+    $("#fab").style.display="none";
+    c.innerHTML=""; c.appendChild(renderGoals());
+    setHeader();
+    return;
+  }
   if(ui.mode==="timesheet"){
     $("#listControls").style.display="none";
     $("#briefingMount").innerHTML="";
@@ -1189,6 +1299,11 @@ function setHeader(){
   if(ui.mode==="timesheet"){
     $("#viewTitle").textContent="Timesheet";
     $("#viewSub").textContent=(member(myId())||{}).name||"";
+    return;
+  }
+  if(ui.mode==="goals"){
+    $("#viewTitle").textContent="Goals";
+    $("#viewSub").textContent={list:"Yearly & 90-day goals",year:ui.g.year+" overview",sprint:"90-day sprint",week:"Weekly plan"}[ui.g.sub]||"";
     return;
   }
   const titles={all:"All Actions",today:"Today",overdue:"Overdue",team:"Team",more:"More"};
@@ -1573,6 +1688,7 @@ function taskCard(t){
         <span class="pill ctx">${t.context}</span>
         ${du?`<span class="pill due ${du.over?"over":""}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>${du.txt}</span>`:""}
         ${dueFlagHtml}
+        ${t.goalId&&goalById(t.goalId)?`<span class="pill recur">${GOAL_IC}${esc(trunc(goalById(t.goalId).title,28))}</span>`:""}
         ${t.recur&&t.recur!=="none"?`<span class="pill recur"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17 2l4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg>${esc(recurSummary(t))}</span>`:""}
         ${asgHtml}
       </div>
@@ -2202,6 +2318,7 @@ function openEditor(id,prefill){
         </div>
       </div>
       <div class="field"><label>Context</label><select id="f-ctx">${ctxOpts}</select></div>
+      ${myGoals().length?`<div class="field"><label>Goal</label><select id="f-goal"><option value="">None</option>${myGoals().map(g=>`<option value="${g.id}" ${t.goalId===g.id?"selected":""}>${g.type==="year"?"Yearly":"90-day"} · ${esc(g.title)}</option>`).join("")}</select></div>`:""}
       <div class="field"><label>Due date</label><input type="date" id="f-due" value="${t.dueDate||""}"></div>
       <div class="field"><label>Assignee</label><select id="f-asg">${memberOpts}</select></div>
       <div class="field rec-wrap"><label>Repeat</label><select id="f-rec" data-rec-type onchange="recTypeChanged(this)">${recOpts}</select><div class="rec-extra" id="recExtra">${recExtraHtml(t.recur||"none",t.recurCfg,t.dueDate)}</div></div>
@@ -2226,6 +2343,7 @@ function saveEditor(){
     title, priority:$("#sheetInner").dataset.prio||"Normal", context:$("#f-ctx").value,
     dueDate:$("#f-due").value, assignee:$("#f-asg").value, notes:$("#f-notes").value.trim(), recur:$("#f-rec").value, recurCfg:buildCfgFromBox($("#recExtra"),$("#f-rec").value)
   };
+  const gSel=$("#f-goal"); if(gSel) data.goalId=gSel.value;
   if(ui.editingId){
     const t=state.tasks.find(x=>x.id===ui.editingId);
     const changed=[];
@@ -2238,7 +2356,7 @@ function saveEditor(){
     if(changed.length) logAct(t,"edit","Edited "+changed.join(", "));
     upsertTask(t); toast("Saved");
   }else{
-    const t=newTask(data); state.tasks.unshift(t); upsertTask(t); toast("Task added");
+    const t=newTask(data); if(data.goalId) t.goalId=data.goalId; state.tasks.unshift(t); upsertTask(t); toast("Task added");
   }
   closeSheet(); render();
 }
@@ -2614,6 +2732,9 @@ create policy "all" on timesheet for all using (true) with check (true);</code><
       <p style="color:var(--text-3);font-size:12px;margin:0 2px 16px;line-height:1.5">Also new: the suggestion box needs an <code>ideas</code> table. Same SQL editor:<br><code style="display:block;background:var(--surface-2);padding:8px;border-radius:8px;margin-top:6px;font-size:11px;white-space:pre-wrap">create table ideas (id text primary key, payload jsonb, updated_at timestamptz, deleted boolean default false);
 alter table ideas enable row level security;
 create policy "all" on ideas for all using (true) with check (true);</code></p>
+      <p style="color:var(--text-3);font-size:12px;margin:0 2px 16px;line-height:1.5">Goals need a <code>goals</code> table. Same SQL editor:<br><code style="display:block;background:var(--surface-2);padding:8px;border-radius:8px;margin-top:6px;font-size:11px;white-space:pre-wrap">create table if not exists goals (id text primary key, payload jsonb, updated_at timestamptz, deleted boolean default false);
+alter table goals enable row level security;
+create policy "all" on goals for all using (true) with check (true);</code></p>
       <div class="field"><label>Supabase URL</label><input type="text" id="sb-url" value="${esc(state.settings.supabaseUrl)}" placeholder="https://xxxx.supabase.co" autocomplete="off" autocapitalize="off"></div>
       <div class="field"><label>Anon public key</label><textarea id="sb-key" placeholder="eyJhbGci…" style="min-height:80px;font-size:13px;font-family:monospace">${esc(state.settings.supabaseKey)}</textarea></div>
       <button class="btn" onclick="saveSync()">Save & test connection</button>
@@ -2725,6 +2846,7 @@ async function doSync(silent){
           setTimeout(()=>toast((after-before)+" new suggestion"+(after-before>1?"s":"")+" to review"),1200);
       }
     }catch(idErr){ console.warn("ideas sync skipped",idErr&&idErr.message); }
+    try{ state.goals=await syncList(sb,"goals",state.goals||[]); }catch(gErr){ console.warn("goals sync skipped",gErr&&gErr.message); }
     // PULL remote
     const {data:rMembers}=await sb.from("members").select("*");
     if(rMembers){
@@ -2880,6 +3002,7 @@ function restoreBackup(file){
       if(!confirm("Restore will replace current tasks & members with the backup. Continue?")) return;
       state.tasks=p.tasks||[]; state.members=p.members||SEED_MEMBERS.map(m=>({...m}));
       if(p.ideas) state.ideas=p.ideas;
+      if(p.goals) state.goals=p.goals;
       if(p.settings){ state.settings={...state.settings,...p.settings}; }
       if(!state.members.find(m=>m.isMe)) state.members.unshift({...ME});
       save(); applyTheme(); render(); toast("✓ Backup restored");
@@ -3905,6 +4028,296 @@ function exportTimesheet(){
   a.href=url; a.download=fname; document.body.appendChild(a); a.click(); a.remove();
   setTimeout(()=>URL.revokeObjectURL(url),1000);
   toast("📊 Excel downloaded");
+}
+
+/* ============================================================
+   GOALS — yearly & 90-day goals, critical steps, sprint + weekly plan.
+   Critical steps are ordinary tasks (goalId + step:true) so they show in
+   Today/All on their target date. Goals + weekly plans share the goals table.
+   ============================================================ */
+const GOAL_IC='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg>';
+const TICK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><path d="M20 6L9 17l-5-5"/></svg>';
+const CHEV_L='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M15 18l-6-6 6-6"/></svg>';
+const CHEV_R='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 18l6-6-6-6"/></svg>';
+const GQ=[["Q1","Jan–Mar"],["Q2","Apr–Jun"],["Q3","Jul–Sep"],["Q4","Oct–Dec"]];
+const trunc=(s,n)=>(s||"").length>n?s.slice(0,n-1)+"…":(s||"");
+function addDays(ymd,n){ const d=new Date(ymd+"T00:00:00"); d.setDate(d.getDate()+n); return fmtYMD(d); }
+function mondayOf(ymd){ const d=new Date(ymd+"T00:00:00"); d.setDate(d.getDate()-((d.getDay()+6)%7)); return fmtYMD(d); }
+function fmtD(v){ if(!v) return ""; const d=v.length>10?new Date(v):new Date(v+"T00:00:00"); return d.toLocaleDateString(undefined,{day:"numeric",month:"short"}); }
+function myGoals(){ const me=myId(); return (state.goals||[]).filter(g=>g.kind==="goal" && g.owner===me); }
+function goalById(id){ return (state.goals||[]).find(g=>g.id===id); }
+const byDue=(a,b)=>(a.dueDate||"9999").localeCompare(b.dueDate||"9999");
+const gSort=(a,b)=>((b.stars||0)-(a.stars||0))||(a.target||"").localeCompare(b.target||"");
+function goalSteps(id){ return state.tasks.filter(t=>t.goalId===id && t.step).sort(byDue); }
+function goalLinked(id){ return state.tasks.filter(t=>t.goalId===id && !t.step).sort(byDue); }
+function goalKids(id){ return myGoals().filter(g=>g.parentId===id).sort((a,b)=>(a.start||"").localeCompare(b.start||"")); }
+function goalAutoSource(g){ return goalSteps(g.id).length?"critical steps":goalKids(g.id).length?"90-day goals":""; }
+function goalPct(g){
+  if(g.progressAuto!==false){
+    const s=goalSteps(g.id); if(s.length) return Math.round(s.filter(t=>t.status==="done").length/s.length*100);
+    const k=goalKids(g.id); if(k.length) return Math.round(k.reduce((a,x)=>a+goalPct(x),0)/k.length);
+  }
+  return g.progress||0;
+}
+function overlaps(g,a,b){ const s=g.start||g.target, e=g.target||g.start; return !!s && s<=b && e>=a; }
+function upsertGoal(g){
+  g.updatedAt=nowISO();
+  const i=state.goals.findIndex(x=>x.id===g.id);
+  if(i>=0) state.goals[i]=g; else state.goals.push(g);
+  save(); pushRow("goals",g);
+}
+async function syncList(sb,table,list){
+  const {data:r,error}=await sb.from(table).select("*"); if(error) throw error;
+  const map={}; list.forEach(i=>map[i.id]=i);
+  const remote={}; (r||[]).forEach(x=>{ remote[x.id]=x;
+    if(x.deleted){ delete map[x.id]; return; }
+    const l=map[x.id]; if(!l || new Date(x.updated_at)>new Date(l.updatedAt||0)) map[x.id]=x.payload; });
+  Object.keys(state.tombstones||{}).forEach(id=>delete map[id]);
+  const out=Object.values(map);
+  const push=out.filter(i=>!remote[i.id] || new Date(i.updatedAt||0)>new Date(remote[i.id].updated_at))
+    .map(i=>({id:i.id,payload:i,updated_at:i.updatedAt||nowISO(),deleted:false}));
+  if(push.length) await sb.from(table).upsert(push);
+  return out;
+}
+function starsHTML(n){ n=n||0; return `<span class="g-stars">${"★".repeat(n)}<span class="off">${"★".repeat(5-n)}</span></span>`; }
+function starSelHTML(pre,n,gid){
+  return `<div class="g-starsel" id="${pre}-stars" data-n="${n}">${[1,2,3,4,5].map(i=>`<button type="button" class="${i<=n?"on":""}" title="${i} star${i>1?"s":""}" onclick="gStarPick('${pre}',${i}${gid?`,'${gid}'`:""})">★</button>`).join("")}</div>`;
+}
+function gStarPick(pre,i,gid){
+  const w=$("#"+pre+"-stars"); if(!w) return;
+  w.dataset.n=i; w.querySelectorAll("button").forEach((b,k)=>b.classList.toggle("on",k<i));
+  if(gid){ const g=goalById(gid); if(g){ g.stars=i; upsertGoal(g); render(); } }
+}
+
+/* ---- shell ---- */
+function renderGoals(){
+  const w=el("div","g-wrap"), s=ui.g.sub;
+  const tabs=`<div class="ts-sub">${[["list","Goals"],["year","Year"],["sprint","90-day"],["week","Week"]].map(([k,l])=>`<button class="${s===k?"active":""}" onclick="gSetSub('${k}')">${l}</button>`).join("")}</div>`;
+  w.innerHTML=tabs+(s==="year"?gYearHTML():s==="sprint"?gSprintHTML():s==="week"?gWeekHTML():gListHTML());
+  return w;
+}
+function gSetSub(s){ ui.g.sub=s; render(); window.scrollTo(0,0); }
+
+/* ---- goals list ---- */
+function goalCardHTML(g){
+  const pct=goalPct(g), steps=goalSteps(g.id), done=steps.filter(t=>t.status==="done").length;
+  const next=steps.find(t=>t.status!=="done");
+  const par=g.parentId&&goalById(g.parentId);
+  const kids=g.type==="year"?goalKids(g.id):[];
+  const over=g.target && g.target<todayStr() && pct<100;
+  return `<div class="g-card" onclick="openGoal('${g.id}')">
+    <div class="g-top"><div style="flex:1;min-width:0"><div class="g-type">${g.type==="year"?"Yearly":"90-day"}${par?" · "+esc(par.title):""}</div><div class="g-title">${esc(g.title)}</div></div>${starsHTML(g.stars)}</div>
+    <div class="g-bar"><i style="width:${pct}%"></i></div>
+    <div class="g-meta"><b>${pct}%</b><span>${fmtD(g.start)} → ${fmtD(g.target)}</span>${steps.length?`<span>${done}/${steps.length} steps</span>`:""}${over?`<span style="color:var(--hi)">Past target</span>`:""}</div>
+    ${next?`<div class="g-next">Next: ${esc(next.title)}${next.dueDate?" · "+fmtD(next.dueDate):""}</div>`:""}
+    ${kids.length?`<div class="g-kids">${kids.map(k=>`<div class="g-kid" onclick="event.stopPropagation();openGoal('${k.id}')"><span>${esc(k.title)}</span><span class="pc">${goalPct(k)}%</span></div>`).join("")}</div>`:""}
+  </div>`;
+}
+function gListHTML(){
+  const all=myGoals(), yr=all.filter(g=>g.type==="year").sort(gSort), q=all.filter(g=>g.type==="q").sort(gSort);
+  const add=`<div class="g-add"><button onclick="openGoalNew('year')">+ Yearly goal</button><button onclick="openGoalNew('q')">+ 90-day goal</button></div>`;
+  if(!all.length) return add+`<div class="empty"><h3>No goals yet</h3><p>Start with a yearly goal, then break it into 90-day goals and critical steps.</p></div>`;
+  return add
+    +(yr.length?`<div class="section-h"><h2>Yearly goals</h2><span class="count">${yr.length}</span></div>`+yr.map(goalCardHTML).join(""):"")
+    +(q.length?`<div class="section-h"><h2>90-day goals</h2><span class="count">${q.length}</span></div>`+q.map(goalCardHTML).join(""):"");
+}
+
+/* ---- create / edit ---- */
+function openGoalNew(type,parentId){
+  const y=new Date().getFullYear(), t=todayStr();
+  const start=type==="year"?y+"-01-01":t, target=type==="year"?y+"-12-31":addDays(t,89);
+  const opts=myGoals().filter(g=>g.type==="year").map(g=>`<option value="${g.id}" ${g.id===parentId?"selected":""}>${esc(g.title)}</option>`).join("");
+  openSheet(`
+    <div class="sheet-hd"><h2>New ${type==="year"?"yearly":"90-day"} goal</h2><button class="sheet-close" onclick="closeSheet()">${X}</button></div>
+    <div class="sheet-body">
+      <div class="field"><label>Goal</label><input type="text" id="gn-title" autocomplete="off" placeholder="${type==="year"?"What do you want to achieve this year?":"What will you achieve in the next 90 days?"}" onkeydown="if(event.key==='Enter')gCreate('${type}')"></div>
+      ${type==="q"?`<div class="field"><label>Linked yearly goal</label><select id="gn-par"><option value="">None</option>${opts}</select></div>`:""}
+      <div class="g-2"><div class="field"><label>Start date</label><input type="date" id="gn-start" value="${start}"></div><div class="field"><label>Target date</label><input type="date" id="gn-target" value="${target}"></div></div>
+      <div class="field"><label>Priority</label>${starSelHTML("gn",3)}</div>
+      <div class="sheet-cta"><button class="btn" onclick="gCreate('${type}')">Create goal</button></div>
+    </div>`);
+  setTimeout(()=>{ const i=$("#gn-title"); if(i) i.focus(); },120);
+}
+function gCreate(type){
+  const i=$("#gn-title"), title=(i.value||"").trim();
+  if(!title){ toast("Name the goal first"); i.focus(); return; }
+  const g={ id:uid(), kind:"goal", type, title, owner:myId(), parentId:type==="q"?(($("#gn-par")||{}).value||""):"",
+    start:$("#gn-start").value, target:$("#gn-target").value, stars:+$("#gn-stars").dataset.n||3,
+    progress:0, progressAuto:true, notes:"", context:"Sales", createdAt:nowISO() };
+  upsertGoal(g); render(); openGoal(g.id); toast("Goal created");
+  setTimeout(()=>{ const s=$("#gs-new"); if(s) s.focus(); },150);
+}
+function gProgHTML(g){
+  const src=goalAutoSource(g), auto=g.progressAuto!==false && !!src, pct=goalPct(g);
+  return `<div class="g-prog"><div class="g-bar" style="margin:0;flex:1"><i style="width:${pct}%"></i></div><b id="gPctLbl">${pct}%</b></div>
+    <input type="range" min="0" max="100" step="5" value="${pct}" ${auto?"disabled":""} oninput="$('#gPctLbl').textContent=this.value+'%';this.previousElementSibling.querySelector('i').style.width=this.value+'%'" onchange="gSetPct('${g.id}',this.value)">
+    ${src?`<label class="g-auto"><input type="checkbox" ${auto?"checked":""} onchange="gSetAuto('${g.id}',this.checked)"> Calculate from ${src}</label>`:""}`;
+}
+function gStepsHTML(gid){
+  const s=goalSteps(gid);
+  if(!s.length) return `<div class="g-none">No critical steps yet.</div>`;
+  return s.map(t=>{ const d=t.status==="done";
+    const sub=d?"Completed "+fmtD(t.completedAt):t.dueDate?(isOverdue(t)?`<span style="color:var(--hi)">Overdue · target ${fmtD(t.dueDate)}</span>`:"Target "+fmtD(t.dueDate)):"No target date";
+    return `<div class="g-step${d?" done":""}"><button class="check" onclick="gToggleStep('${t.id}','${gid}')">${TICK}</button>
+      <div class="sb"><input class="st" value="${esc(t.title)}" onchange="gStepTitle('${t.id}',this.value)"><div class="sd">${sub}</div></div>
+      <input type="date" value="${t.dueDate||""}" onchange="gStepDate('${t.id}','${gid}',this.value)">
+      <button class="del" title="Delete step" onclick="gDelStep('${t.id}','${gid}')">${X}</button></div>`; }).join("");
+}
+function gLinkedHTML(gid){
+  const l=goalLinked(gid), me=myId();
+  const avail=vis().filter(t=>t.status!=="done" && !t.goalId && t.assignee===me).sort(byDue);
+  return (l.length?l.map(t=>`<div class="g-step${t.status==="done"?" done":""}"><button class="check" onclick="gToggleStep('${t.id}','${gid}')">${TICK}</button>
+      <div class="sb" style="cursor:pointer" onclick="openDetail('${t.id}')"><div class="st">${esc(t.title)}</div><div class="sd">${t.dueDate?"Due "+fmtD(t.dueDate):"No due date"}</div></div>
+      <button class="del" title="Unlink" onclick="gUnlink('${t.id}','${gid}')">${X}</button></div>`).join(""):"")
+    +(avail.length?`<select class="g-link" onchange="gLink(this.value,'${gid}')"><option value="">+ Link an existing task…</option>${avail.map(t=>`<option value="${t.id}">${esc(trunc(t.title,60))}</option>`).join("")}</select>`:(l.length?"":`<div class="g-none">No linked tasks.</div>`));
+}
+function openGoal(id){
+  const g=goalById(id); if(!g) return;
+  const yearly=myGoals().filter(x=>x.type==="year");
+  const kids=g.type==="year"?goalKids(id):[];
+  openSheet(`
+    <div class="sheet-hd"><h2>${g.type==="year"?"Yearly goal":"90-day goal"}</h2><button class="sheet-close" onclick="closeSheet()">${X}</button></div>
+    <div class="sheet-body">
+      <div class="field"><label>Goal</label><input type="text" id="g-title" value="${esc(g.title)}" onchange="gUpd('${id}','title',this.value.trim()||'Untitled')"></div>
+      <div class="g-2"><div class="field"><label>Start date</label><input type="date" value="${g.start||""}" onchange="gUpd('${id}','start',this.value)"></div>
+        <div class="field"><label>Target date</label><input type="date" value="${g.target||""}" onchange="gUpd('${id}','target',this.value)"></div></div>
+      ${g.type==="q"?`<div class="field"><label>Linked yearly goal</label><select onchange="gUpd('${id}','parentId',this.value)"><option value="">None</option>${yearly.map(y=>`<option value="${y.id}" ${g.parentId===y.id?"selected":""}>${esc(y.title)}</option>`).join("")}</select></div>`:""}
+      <div class="g-2"><div class="field"><label>Priority</label>${starSelHTML("g",g.stars||0,id)}</div>
+        <div class="field"><label>Context</label><select onchange="gUpd('${id}','context',this.value)">${CONTEXTS.map(c=>`<option ${g.context===c?"selected":""}>${c}</option>`).join("")}</select></div></div>
+      <div class="field"><label>Progress</label><div id="gProg">${gProgHTML(g)}</div></div>
+      <div class="field"><label>Details</label><textarea placeholder="What success looks like, why it matters…" onchange="gUpd('${id}','notes',this.value)">${esc(g.notes)}</textarea></div>
+      <div class="field"><label>Critical steps</label><div id="gSteps">${gStepsHTML(id)}</div>
+        <div class="g-stepadd"><input type="text" id="gs-new" autocomplete="off" placeholder="Add a critical step…" onkeydown="if(event.key==='Enter')gAddStep('${id}')"><input type="date" id="gs-date" title="Target date"><button onclick="gAddStep('${id}')">Add</button></div></div>
+      <div class="field"><label>Linked tasks</label><div id="gLinked">${gLinkedHTML(id)}</div></div>
+      ${g.type==="year"?`<div class="field"><label>90-day goals</label><div class="g-kids" style="margin-top:0">${kids.map(k=>`<div class="g-kid" onclick="openGoal('${k.id}')"><span>${esc(k.title)}</span><span class="pc">${goalPct(k)}%</span></div>`).join("")}</div>
+        <button class="btn ghost" style="margin-top:8px;padding:12px;font-size:14px" onclick="openGoalNew('q','${id}')">+ Add 90-day goal</button></div>`:""}
+      <button class="btn danger" style="margin-top:6px" onclick="gDelete('${id}')">Delete goal</button>
+    </div>`);
+  setTimeout(()=>{ const i=$("#g-title"); if(i && !g.title) i.focus(); },120);
+}
+function gRefresh(gid){
+  const g=goalById(gid);
+  if($("#gSteps")) $("#gSteps").innerHTML=gStepsHTML(gid);
+  if($("#gLinked")) $("#gLinked").innerHTML=gLinkedHTML(gid);
+  if(g && $("#gProg")) $("#gProg").innerHTML=gProgHTML(g);
+}
+function gUpd(id,k,v){
+  const g=goalById(id); if(!g) return;
+  g[k]=v; upsertGoal(g);
+  if(k==="context") goalSteps(id).forEach(t=>{ if(t.status!=="done"){ t.context=v; upsertTask(t); } });
+  render();
+}
+function gSetPct(id,v){ const g=goalById(id); if(!g) return; g.progress=+v; g.progressAuto=false; upsertGoal(g); render(); }
+function gSetAuto(id,on){
+  const g=goalById(id); if(!g) return;
+  if(!on) g.progress=goalPct({...g,progressAuto:true});
+  g.progressAuto=on; upsertGoal(g); $("#gProg").innerHTML=gProgHTML(g); render();
+}
+function gAddStep(gid){
+  const g=goalById(gid), i=$("#gs-new"); if(!g||!i) return;
+  const title=i.value.trim(); if(!title){ i.focus(); return; }
+  const t=newTask({ title, dueDate:$("#gs-date").value, assignee:g.owner||myId(), context:g.context||"Sales" });
+  t.goalId=gid; t.step=true; logAct(t,"edit","Critical step for goal: "+g.title);
+  upsertTask(t); i.value=""; i.focus(); gRefresh(gid); render();
+}
+function gToggleStep(tid,gid){ toggleDone(tid); gRefresh(gid); }
+function gStepTitle(tid,v){ const t=state.tasks.find(x=>x.id===tid); if(!t||!v.trim()) return; t.title=v.trim(); upsertTask(t); render(); }
+function gStepDate(tid,gid,v){ const t=state.tasks.find(x=>x.id===tid); if(!t) return; t.dueDate=v; upsertTask(t); gRefresh(gid); render(); }
+function gDelStep(tid,gid){
+  const t=state.tasks.find(x=>x.id===tid); if(!t || !confirm("Delete this step?")) return;
+  state.tasks=state.tasks.filter(x=>x.id!==tid); save(); pushTaskDelete(t); gRefresh(gid); render();
+}
+function gLink(tid,gid){ const t=state.tasks.find(x=>x.id===tid), g=goalById(gid); if(!t||!g) return; t.goalId=gid; logAct(t,"edit","Linked to goal: "+g.title); upsertTask(t); gRefresh(gid); render(); }
+function gUnlink(tid,gid){ const t=state.tasks.find(x=>x.id===tid); if(!t) return; t.goalId=""; logAct(t,"edit","Unlinked from goal"); upsertTask(t); gRefresh(gid); render(); }
+function gDelete(id){
+  const g=goalById(id); if(!g) return;
+  if(!confirm(`Delete "${g.title}" and its critical steps? Linked tasks are kept.`)) return;
+  goalSteps(id).forEach(t=>{ state.tasks=state.tasks.filter(x=>x.id!==t.id); pushTaskDelete(t); });
+  goalLinked(id).forEach(t=>{ t.goalId=""; upsertTask(t); });
+  goalKids(id).forEach(k=>{ k.parentId=""; upsertGoal(k); });
+  state.goals=state.goals.filter(x=>x.id!==id);
+  markDeleted(id); save(); pushRow("goals",g,true);
+  closeSheet(); render(); toast("Goal deleted");
+}
+
+/* ---- yearly overview ---- */
+function gYear(n){ ui.g.year+=n; render(); }
+function gYearHTML(){
+  const y=ui.g.year, a=y+"-01-01", b=y+"-12-31", today=todayStr();
+  const qr=[0,1,2,3].map(i=>[y+"-"+pad2(i*3+1)+"-01", fmtYMD(new Date(y,i*3+3,0))]);
+  const nowQ=today.slice(0,4)===String(y)?Math.floor((+today.slice(5,7)-1)/3):-1;
+  const all=myGoals(), yearly=all.filter(g=>g.type==="year" && overlaps(g,a,b)).sort(gSort);
+  const loose=all.filter(g=>g.type==="q" && (!g.parentId||!goalById(g.parentId)) && overlaps(g,a,b));
+  const nav=`<div class="g-nav"><button class="cal-nav" onclick="gYear(-1)">${CHEV_L}</button><div class="t">${y}</div><button class="cal-nav" onclick="gYear(1)">${CHEV_R}</button></div>`;
+  const cells=(kids,steps)=>`<div class="g-qs">${qr.map(([qa,qb],i)=>{
+    const ks=kids.filter(k=>overlaps(k,qa,qb)), ss=steps.filter(t=>t.dueDate && t.dueDate>=qa && t.dueDate<=qb);
+    return `<div class="g-q${i===nowQ?" now":""}"><h4>${GQ[i][0]} · ${GQ[i][1]}</h4>${ks.map(k=>`<button class="g-chip" onclick="openGoal('${k.id}')">${esc(k.title)}<span class="b"><i style="width:${goalPct(k)}%"></i></span></button>`).join("")}${ss.map(t=>`<div class="stp${t.status==="done"?" done":""}">• ${esc(t.title)}</div>`).join("")}${!ks.length&&!ss.length?`<div class="none">—</div>`:""}</div>`;
+  }).join("")}</div>`;
+  if(!yearly.length && !loose.length) return nav+`<div class="empty"><h3>No goals in ${y}</h3><p>Add a yearly goal from the Goals tab.</p></div>`;
+  return nav+`<div class="g-hint">90-day goals appear in each quarter they run through. • marks the yearly goal's own critical steps.</div>`
+    +yearly.map(g=>{ const pct=goalPct(g); return `<div class="g-panel"><div class="g-top" style="cursor:pointer" onclick="openGoal('${g.id}')"><div style="flex:1;min-width:0"><div class="g-title">${esc(g.title)}</div><div class="g-bar" style="margin-top:8px"><i style="width:${pct}%"></i></div><div class="g-meta"><b>${pct}%</b><span>Target ${fmtD(g.target)}</span></div></div>${starsHTML(g.stars)}</div>${cells(goalKids(g.id),goalSteps(g.id))}</div>`; }).join("")
+    +(loose.length?`<div class="g-panel"><h3>Not linked to a yearly goal</h3>${cells(loose,[])}</div>`:"");
+}
+
+/* ---- 90-day sprint ---- */
+function gActHTML(t){
+  const d=t.dueDate?new Date(t.dueDate+"T00:00:00"):null;
+  return `<div class="g-act${t.status==="done"?" done":""}"><button class="ck" onclick="toggleDone('${t.id}')">${TICK}</button><span class="tx" onclick="openDetail('${t.id}')">${esc(t.title)}</span>${t.step?"":`<span class="tag">Task</span>`}${d?`<span class="dd">${WD[d.getDay()]} ${d.getDate()}</span>`:""}</div>`;
+}
+function gSprintHTML(){
+  const qs=myGoals().filter(g=>g.type==="q").sort((a,b)=>(a.start||"").localeCompare(b.start||""));
+  if(!qs.length) return `<div class="empty"><h3>No 90-day goals yet</h3><p>Create one to plan it week by week.</p></div><div class="g-add"><button onclick="openGoalNew('q')">+ 90-day goal</button></div>`;
+  const today=todayStr();
+  let sel=goalById(ui.g.sprint);
+  if(!sel || sel.type!=="q" || sel.owner!==myId()){ sel=qs.find(g=>g.start<=today && g.target>=today)||qs[qs.length-1]; ui.g.sprint=sel.id; }
+  const s0=mondayOf(sel.start||today), end=sel.target||addDays(s0,90);
+  const n=Math.max(1,Math.min(26,Math.round((new Date(mondayOf(end)+"T00:00:00")-new Date(s0+"T00:00:00"))/(7*864e5))+1));
+  const last=addDays(s0,7*n-1);
+  const acts=goalSteps(sel.id).concat(goalLinked(sel.id)).sort(byDue);
+  const done=acts.filter(t=>t.status==="done").length, pct=goalPct(sel);
+  const cur=today>=s0 && today<=last ? Math.floor((new Date(today+"T00:00:00")-new Date(s0+"T00:00:00"))/(7*864e5))+1 : 0;
+  let rows="";
+  for(let i=0;i<n;i++){
+    const a=addDays(s0,7*i), b=addDays(a,6), list=acts.filter(t=>t.dueDate && t.dueDate>=a && t.dueDate<=b);
+    rows+=`<div class="g-wk${today>=a&&today<=b?" now":""}"><div><div class="wl">Week ${i+1}</div><div class="g-wdate">${fmtD(a)} – ${fmtD(b)}</div></div><div>${list.length?list.map(gActHTML).join(""):`<div class="none">—</div>`}</div></div>`;
+  }
+  const outside=acts.filter(t=>t.dueDate && (t.dueDate<s0 || t.dueDate>last)), undated=acts.filter(t=>!t.dueDate);
+  if(outside.length) rows+=`<div class="g-wk"><div><div class="wl">Outside</div><div class="g-wdate">sprint dates</div></div><div>${outside.map(gActHTML).join("")}</div></div>`;
+  if(undated.length) rows+=`<div class="g-wk"><div><div class="wl">No date</div></div><div>${undated.map(gActHTML).join("")}</div></div>`;
+  return `<div class="g-chips">${qs.map(g=>`<button class="chip${g.id===sel.id?" active":""}" onclick="ui.g.sprint='${g.id}';render()">${esc(trunc(g.title,34))}</button>`).join("")}</div>
+    <div class="g-card" onclick="openGoal('${sel.id}')"><div class="g-top"><div style="flex:1;min-width:0"><div class="g-type">90-day${sel.parentId&&goalById(sel.parentId)?" · "+esc(goalById(sel.parentId).title):""}</div><div class="g-title">${esc(sel.title)}</div></div>${starsHTML(sel.stars)}</div>
+      <div class="g-bar"><i style="width:${pct}%"></i></div>
+      <div class="g-meta"><b>${pct}%</b><span>${fmtD(sel.start)} → ${fmtD(sel.target)}</span>${cur?`<span>Week ${cur} of ${n}</span>`:""}<span>${done}/${acts.length} actions done</span></div></div>
+    <div class="g-panel" style="padding-top:6px">${rows}</div>`;
+}
+
+/* ---- weekly plan ---- */
+function weekPlan(mon){
+  const me=myId(), id="wk-"+me+"-"+mon;
+  const p=goalById(id);
+  if(p){ while(p.habits.length<5) p.habits.push({n:"",d:[0,0,0,0,0,0,0]}); return p; }
+  const prev=(state.goals||[]).filter(x=>x.kind==="week" && x.owner===me && x.week<mon).sort((a,b)=>b.week.localeCompare(a.week))[0];
+  return { id, kind:"week", owner:me, week:mon, focus:"",
+    habits:[0,1,2,3,4].map(i=>({ n:prev&&prev.habits[i]?prev.habits[i].n:"", d:[0,0,0,0,0,0,0] })) };
+}
+function gWeek(n){ ui.g.wk = n===0 ? mondayOf(todayStr()) : addDays(ui.g.wk||mondayOf(todayStr()),7*n); render(); }
+function gwSet(k,v){ const p=weekPlan(ui.g.wk); p[k]=v; upsertGoal(p); }
+function gwHabit(i,v){ const p=weekPlan(ui.g.wk); p.habits[i].n=v.trim(); upsertGoal(p); }
+function gwFocusMark(r){ const p=weekPlan(ui.g.wk); p.focusResult=p.focusResult===r?"":r; upsertGoal(p); render(); }
+function gwDay(i,d){ const p=weekPlan(ui.g.wk); p.habits[i].d[d]=p.habits[i].d[d]?0:1; upsertGoal(p); render(); }
+function gWeekHTML(){
+  if(!ui.g.wk) ui.g.wk=mondayOf(todayStr());
+  const mon=ui.g.wk, p=weekPlan(mon), today=todayStr(), thisMon=mondayOf(today);
+  const nav=`<div class="g-nav"><button class="cal-nav" onclick="gWeek(-1)">${CHEV_L}</button><div class="t">Week of ${fmtD(mon)}</div>${mon!==thisMon?`<button class="cal-today" onclick="gWeek(0)">This week</button>`:""}<button class="cal-nav" onclick="gWeek(1)">${CHEV_R}</button></div>`;
+  const habits=p.habits.map((h,i)=>`<div class="g-hab"><input type="text" value="${esc(h.n)}" placeholder="Skill or habit ${i+1}" onchange="gwHabit(${i},this.value)">
+    <div class="g-days">${[0,1,2,3,4,5,6].map(d=>{ const ds=addDays(mon,d); return `<button class="dk${h.d[d]?" on":""}${ds===today?" today":""}" title="${WDL[(d+1)%7]} ${fmtD(ds)}" onclick="gwDay(${i},${d})">${h.d[d]?TICK:"MTWTFSS"[d]}</button>`; }).join("")}<span class="n">${h.d.filter(Boolean).length}/7</span></div></div>`).join("");
+  const fr=p.focusResult||"";
+  return nav+`<div class="g-panel g-focus${fr?" "+fr:""}"><div class="g-fh"><h3>Main focus this week</h3>
+      <span class="g-fs">${fr==="hit"?"Hit \u2014 nice work":fr==="miss"?"Missed":""}</span>
+      <button class="g-fk hit${fr==="hit"?" on":""}" title="Hit" onclick="gwFocusMark('hit')">${TICK}</button>
+      <button class="g-fk miss${fr==="miss"?" on":""}" title="Missed" onclick="gwFocusMark('miss')">${X}</button></div>
+    <textarea class="g-ta" placeholder="The one outcome that makes this week a success" onchange="gwSet('focus',this.value)">${esc(p.focus)}</textarea></div>
+    <div class="g-panel"><h3>5 skills & habits to adopt</h3>${habits}</div>`;
 }
 
 /* ============================================================
