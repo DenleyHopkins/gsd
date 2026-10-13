@@ -884,7 +884,7 @@ try{
 
 /* ---------- Constants / seed data ---------- */
 const CONTEXTS = ["Sales","Operations","Admin","Personal","Finance","Marketing"];
-const APP_VERSION = "v1.26.4";
+const APP_VERSION = "v1.26.5";
 const ME = { id:"me-denley", name:"Denley Hopkins", role:"Sales Team Leader", email:"denley.hopkins@wilsonscolchester.com", isMe:true };
 const SEED_MEMBERS = [
   ME,
@@ -2696,7 +2696,7 @@ async function startAutoSync(){
   await doSync(true);
   // periodic fallback poll (covers push + pull if realtime drops)
   if(autoSyncTimer) clearInterval(autoSyncTimer);
-  autoSyncTimer=setInterval(()=>{ if(document.visibilityState==="visible") doSync(true); },30000);
+  autoSyncTimer=setInterval(()=>{ if(document.visibilityState==="visible") doSync(true); },120000);
   // realtime — near-instant pickup of other devices' changes
   try{
     const sb=await ensureSupabase(); if(!sb) return;
