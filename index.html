@@ -884,7 +884,7 @@ try{
 
 /* ---------- Constants / seed data ---------- */
 const CONTEXTS = ["Sales","Operations","Admin","Personal","Finance","Marketing"];
-const APP_VERSION = "v1.26.3";
+const APP_VERSION = "v1.26.4";
 const ME = { id:"me-denley", name:"Denley Hopkins", role:"Sales Team Leader", email:"denley.hopkins@wilsonscolchester.com", isMe:true };
 const SEED_MEMBERS = [
   ME,
@@ -2696,7 +2696,7 @@ async function startAutoSync(){
   await doSync(true);
   // periodic fallback poll (covers push + pull if realtime drops)
   if(autoSyncTimer) clearInterval(autoSyncTimer);
-  autoSyncTimer=setInterval(()=>{ if(document.visibilityState==="visible") doSync(true); },5000);
+  autoSyncTimer=setInterval(()=>{ if(document.visibilityState==="visible") doSync(true); },30000);
   // realtime — near-instant pickup of other devices' changes
   try{
     const sb=await ensureSupabase(); if(!sb) return;
@@ -2789,6 +2789,11 @@ async function pushRow(table,obj,deleted){
     if(error) console.warn(table+" push failed",error.message);
   }catch(e){ /* offline — will resync later */ }
 }
+function needsPush(local,remote){
+  if(!remote) return true;
+  if(remote.deleted) return false;
+  return !!local.updatedAt && new Date(local.updatedAt) > new Date(remote.updated_at||0);
+}
 async function doSync(silent){
   if(!state.settings.supabaseUrl){ if(!silent){toast("Set up cloud sync first");openSyncSheet();} return; }
   if(ui.syncing) return; ui.syncing=true;
@@ -2808,20 +2813,24 @@ async function doSync(silent){
     Object.keys(tomb).forEach(id=>delete tmap[id]);
     state.tasks=Object.values(tmap);
     state.tombstones=pruneTombstones(tomb);
-    // PUSH local (tombstoned ids are gone from state.tasks, so never re-pushed)
-    const taskRows=state.tasks.map(t=>({id:t.id,payload:t,updated_at:t.updatedAt||nowISO(),deleted:false}));
+    // PUSH only rows that are new or newer than the cloud copy
+    const rT={}; (rTasks||[]).forEach(r=>rT[r.id]=r);
+    const taskRows=state.tasks.filter(t=>needsPush(t,rT[t.id])).map(t=>({id:t.id,payload:t,updated_at:t.updatedAt||nowISO(),deleted:false}));
     if(taskRows.length) await sb.from("tasks").upsert(taskRows);
     // re-assert any tombstone another device has flipped back to live
     const revived=(rTasks||[]).filter(r=>!r.deleted && state.tombstones[r.id])
       .map(r=>({id:r.id,payload:r.payload,updated_at:nowISO(),deleted:true}));
     if(revived.length) await sb.from("tasks").upsert(revived);
-    const memRows=state.members.map(m=>({id:m.id,payload:m,updated_at:m.updatedAt||nowISO(),deleted:false}));
-    await sb.from("members").upsert(memRows);
+    const {data:rMembers}=await sb.from("members").select("*");
+    const rM={}; (rMembers||[]).forEach(r=>rM[r.id]=r);
+    const memRows=state.members.filter(m=>needsPush(m,rM[m.id])).map(m=>({id:m.id,payload:m,updated_at:m.updatedAt||nowISO(),deleted:false}));
+    if(memRows.length) await sb.from("members").upsert(memRows);
     // timesheet (own try — table may not exist on older setups)
     try{
-      const tsRows=Object.values(state.timesheet).map(e=>({id:e.id,payload:e,updated_at:e.updatedAt||nowISO(),deleted:false}));
-      if(tsRows.length) await sb.from("timesheet").upsert(tsRows);
       const {data:rTS}=await sb.from("timesheet").select("*");
+      const rS={}; (rTS||[]).forEach(r=>rS[r.id]=r);
+      const tsRows=Object.values(state.timesheet).filter(e=>needsPush(e,rS[e.id])).map(e=>({id:e.id,payload:e,updated_at:e.updatedAt||nowISO(),deleted:false}));
+      if(tsRows.length) await sb.from("timesheet").upsert(tsRows);
       if(rTS){
         const map={...state.timesheet};
         rTS.forEach(r=>{
@@ -2835,9 +2844,10 @@ async function doSync(silent){
     // suggestion box (own try — table may not exist on older setups)
     try{
       const before=newIdeas().length;
-      const idRows=(state.ideas||[]).map(i=>({id:i.id,payload:i,updated_at:i.updatedAt||nowISO(),deleted:false}));
-      if(idRows.length) await sb.from("ideas").upsert(idRows);
       const {data:rIdeas}=await sb.from("ideas").select("*");
+      const rI={}; (rIdeas||[]).forEach(r=>rI[r.id]=r);
+      const idRows=(state.ideas||[]).filter(i=>needsPush(i,rI[i.id])).map(i=>({id:i.id,payload:i,updated_at:i.updatedAt||nowISO(),deleted:false}));
+      if(idRows.length) await sb.from("ideas").upsert(idRows);
       if(rIdeas){
         const map={}; (state.ideas||[]).forEach(i=>map[i.id]=i);
         rIdeas.forEach(r=>{
@@ -2853,8 +2863,7 @@ async function doSync(silent){
       }
     }catch(idErr){ console.warn("ideas sync skipped",idErr&&idErr.message); }
     try{ state.goals=await syncList(sb,"goals",state.goals||[]); ui.goalsSyncErr=""; }catch(gErr){ ui.goalsSyncErr=(gErr&&gErr.message)||"sync failed"; console.warn("goals sync skipped",ui.goalsSyncErr); }
-    // PULL remote
-    const {data:rMembers}=await sb.from("members").select("*");
+    // PULL remote members (fetched above)
     if(rMembers){
       const map={}; state.members.forEach(m=>map[m.id]=m);
       rMembers.forEach(r=>{
