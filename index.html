@@ -884,7 +884,7 @@ try{
 
 /* ---------- Constants / seed data ---------- */
 const CONTEXTS = ["Sales","Operations","Admin","Personal","Finance","Marketing"];
-const APP_VERSION = "v1.26.5";
+const APP_VERSION = "v1.26.6";
 const ME = { id:"me-denley", name:"Denley Hopkins", role:"Sales Team Leader", email:"denley.hopkins@wilsonscolchester.com", isMe:true };
 const SEED_MEMBERS = [
   ME,
@@ -2702,12 +2702,14 @@ async function startAutoSync(){
     const sb=await ensureSupabase(); if(!sb) return;
     if(sbChannel){ try{sb.removeChannel(sbChannel);}catch(e){} sbChannel=null; }
     let deb=null; const bump=()=>{ clearTimeout(deb); deb=setTimeout(()=>doSync(true),400); };
-    sbChannel=sb.channel("gsd-sync")
+    // timesheet isn't live-listened: it's the busiest table and only needs the 2-min / on-focus sync
+    const ch=sb.channel("gsd-sync")
       .on("postgres_changes",{event:"*",schema:"public",table:"tasks"},bump)
       .on("postgres_changes",{event:"*",schema:"public",table:"members"},bump)
-      .on("postgres_changes",{event:"*",schema:"public",table:"timesheet"},bump)
-      .on("postgres_changes",{event:"*",schema:"public",table:"ideas"},bump)
-      .subscribe(st=>{
+      .on("postgres_changes",{event:"*",schema:"public",table:"ideas"},bump);
+    sbChannel=ch;
+    ch.subscribe(st=>{
+        if(ch!==sbChannel) return;   // old channel closing after a reconnect — ignore, or it loops
         ui.rtStatus=st;
         if(st==="SUBSCRIBED") doSync(true);
         if(st==="CLOSED"||st==="CHANNEL_ERROR"||st==="TIMED_OUT"){
@@ -3461,8 +3463,14 @@ function tsSave(e){
   const empty=!e.plan && !e.actual && !e.planTaskId && !(e.cats&&e.cats.length) && !e.hp
     && !e.planCleared && !e.actualCleared;
   if(empty) delete state.timesheet[e.id]; else state.timesheet[e.id]=e;
-  save(); pushRow("timesheet",e,empty);
+  save(); tsQueuePush(e,empty);
 }
+/* Typing fires on every keystroke — batch cloud writes so a sentence is 1 write, not 30 */
+const _tsPending={}; let _tsPushT=null;
+function tsQueuePush(e,empty){ _tsPending[e.id]={e,empty}; clearTimeout(_tsPushT); _tsPushT=setTimeout(tsFlushPush,2000); }
+function tsFlushPush(){ clearTimeout(_tsPushT); Object.keys(_tsPending).forEach(id=>{ const p=_tsPending[id]; delete _tsPending[id]; pushRow("timesheet",p.e,p.empty); }); }
+document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="hidden") tsFlushPush(); });
+window.addEventListener("pagehide",tsFlushPush);
 const MTG_RE=/\b(mtg|mtgs|mtng|meet|meets|meeting|meetings|meetng|meetin|catch[- ]?up|1[-: ]?2[-: ]?1|one[- ]?to[- ]?one|appt|appointment|visit|site visit|review|workshop|briefing|huddle)\b/i;
 function looksLikeMeeting(txt){ return MTG_RE.test(txt||""); }
 /* Recall: the categories you last used for this same wording, on any earlier day.
