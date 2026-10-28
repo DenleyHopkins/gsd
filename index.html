@@ -677,6 +677,21 @@ input.detail-title:focus{border-bottom:2px solid var(--green);margin-bottom:12px
 .ts-hp.HP{background:var(--green);color:#fff}
 .ts-hp.LP{background:var(--hi);color:#fff}
 .ts-tags .add{font-size:15px;color:var(--text-3);font-weight:400;line-height:1}
+.ts-tags{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:none}
+.ts-row.tssel{background:color-mix(in srgb,var(--green) 20%,transparent)}
+.ts-row.tssel .ts-tags{box-shadow:inset 3px 0 0 var(--green)}
+.ts-selbar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--nav-h) + var(--safe-b) + 44px);z-index:70;
+  width:min(520px,calc(100% - 24px));display:flex;align-items:center;gap:8px;padding:10px 10px 10px 16px;
+  background:var(--grey);color:#fff;border-radius:16px;box-shadow:var(--shadow-lg)}
+.ts-selbar .sb-t{flex:1;min-width:0;display:flex;flex-direction:column;font-size:12px;line-height:1.35}
+.ts-selbar .sb-t b{font-size:14px}
+.ts-selbar .sb-t span{color:#d6d7d0}
+.ts-selbar button{height:42px;padding:0 16px;border-radius:11px;font-weight:800;font-size:13.5px;border:none;cursor:pointer}
+.ts-selbar .sb-x{background:rgba(255,255,255,.14);color:#fff}
+.ts-selbar .sb-go{background:var(--green);color:#fff}
+.ts-fill{display:flex;align-items:center;gap:8px;width:100%;padding:11px 12px;margin:0 0 16px;border:1.5px dashed var(--line);
+  border-radius:12px;background:var(--surface-2);color:var(--text);font-size:13.5px;font-weight:700;cursor:pointer;text-align:left}
+.ts-fill .ts-dots{margin-left:auto}
 
 /* week view */
 .app.wide{max-width:1180px}
@@ -884,7 +899,7 @@ try{
 
 /* ---------- Constants / seed data ---------- */
 const CONTEXTS = ["Sales","Operations","Admin","Personal","Finance","Marketing"];
-const APP_VERSION = "v1.27.1";
+const APP_VERSION = "v1.28.1";
 const ME = { id:"me-denley", name:"Denley Hopkins", role:"Sales Team Leader", email:"denley.hopkins@wilsonscolchester.com", isMe:true };
 const SEED_MEMBERS = [
   ME,
@@ -1264,6 +1279,7 @@ function toast(msg){
    RENDERING
    ============================================================ */
 function render(){
+  setTimeout(tsSelPaint,0);
   const app=$("#app");
   if(app) app.classList.toggle("wide", (ui.mode==="timesheet" && ui.ts.sub==="week") || (ui.mode==="goals" && ui.g.sub==="year"));
   updateNav(); updateBadges(); updateModebar(); renderPeopleChips(); updateAvatar(); renderBulkBar();
@@ -3755,14 +3771,15 @@ function tsSheetHTML(){
     const dots=(e.cats||[]).map(c=>`<i style="background:${TS_COLOR[c]||'#999'}"></i>`).join("");
     const hpBadge=e.hp?`<span class="ts-hp ${e.hp}">${e.hp}</span>`:"";
     const tagInner=(dots||hpBadge)?`<div class="ts-dots">${dots}</div>${hpBadge}`:`<span class="add">+</span>`;
-    rows+=`<div class="ts-row${hs?' hourstart':''}${date===nowSlot().date&&s===nowSlot().slot?' nowslot nowline':''}">
+    const sr=tsSelRange(); const insel=sr&&ui.ts.sel.date===date&&s>=sr[0]&&s<=sr[1];
+    rows+=`<div data-slot="${s}" class="ts-row${insel?' tssel':''}${hs?' hourstart':''}${date===nowSlot().date&&s===nowSlot().slot?' nowslot nowline':''}">
       <div class="ts-time">${slotLabel(s)}</div>
       <div class="ts-plan${linked?' linked':''}">
         ${linked?'<svg class="lk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg>':''}
         <input class="ts-in" list="tsRecent" value="${esc(e.plan||'')}" oninput="tsText('${date}',${s},'plan',this.value)">
       </div>
       <div><input class="ts-in" list="tsRecent" data-s="${s}" value="${esc(e.actual||'')}" oninput="tsText('${date}',${s},'actual',this.value)" oncontextmenu="tsAdoptPlan(event,'${date}',${s})"></div>
-      <div class="ts-tags" onclick="openTSBlock('${date}',${s})">${tagInner}</div>
+      <div class="ts-tags" title="Tap to tag · drag down to tag several" onpointerdown="tsDragStart(event,'${date}',${s})" oncontextmenu="event.preventDefault()">${tagInner}</div>
     </div>`;
   }
   return `${tsRecentDatalist()}
@@ -3791,9 +3808,14 @@ function openTSBlock(date,slot){
     return `<button class="catchip${on?' on':''}" style="${on?`background:${col};border-color:${col}`:''}" onclick="tsToggleCat('${date}',${slot},this.dataset.c,this)" data-c="${esc(c)}"><i style="background:${col}"></i>${esc(c)}</button>`;
   }).join("");
   const linked=e.planTaskId?state.tasks.find(t=>t.id===e.planTaskId):null;
+  const prev=slot>0?tsGet(date,slot-1):null;
+  const canFill=prev&&((prev.cats&&prev.cats.length)||prev.hp);
+  const fillBtn=canFill?`<button class="ts-fill" onclick="tsFillDown('${date}',${slot})">↓ Same as ${slotLabel(slot-1)}
+    <span class="ts-dots">${(prev.cats||[]).map(c=>`<i style="background:${TS_COLOR[c]||'#999'}"></i>`).join("")}</span>${prev.hp?`<span class="ts-hp ${prev.hp}">${prev.hp}</span>`:""}</button>`:"";
   openSheet(`
     <div class="sheet-hd"><h2>${slotLabel(slot)} – ${slotLabel(slot+1)}</h2><button class="sheet-close" onclick="closeSheet()">${X}</button></div>
     <div class="sheet-body">
+      ${fillBtn}
       <div class="field"><label>Plan</label>
         <div style="display:flex;gap:8px">
           <input type="text" id="tsb-plan" list="tsRecent" style="flex:1" value="${esc(e.plan||'')}" placeholder="What you plan to do" oninput="tsText('${date}',${slot},'plan',this.value)">
@@ -3822,6 +3844,101 @@ function openTSBlock(date,slot){
       ${tsRecentDatalist()}
       <button class="btn" onclick="closeSheet()">Done</button>
     </div>`);
+}
+/* Fill down: copy the block above's tags, payoff, and its Actual if this one is blank */
+function tsFillDown(date,slot){
+  const p=tsGet(date,slot-1); if(!p) return;
+  const {e}=tsEnsure(date,slot);
+  e.cats=(p.cats||[]).slice(); e.hp=p.hp||null; delete e.autoCat; delete e.autoCats;
+  if(!(e.actual||"").trim() && p.actual){ e.actual=p.actual; delete e.actualCleared; }
+  tsSave(e); toast("Copied from "+slotLabel(slot-1)); openTSBlock(date,slot);
+}
+/* Multi-select: drag down the Cat column to highlight blocks, release to tag them all.
+   The Cat column doesn't scroll the page (touch-action:none) — scroll on the other columns. */
+let _tsDrag=null;
+function tsSelRange(){ const s=ui.ts.sel; return s?[Math.min(s.a,s.b),Math.max(s.a,s.b)]:null; }
+function tsSlotAt(x,y){
+  const r=document.elementFromPoint(x,y); const row=r&&r.closest&&r.closest(".ts-row[data-slot]");
+  return row?+row.dataset.slot:null;
+}
+function tsDragStart(ev,date,s){
+  if(ev.button>0) return;
+  ev.preventDefault();
+  const el=ev.currentTarget; try{ el.setPointerCapture(ev.pointerId); }catch(_){}
+  _tsDrag={date,a:s,b:s,y0:ev.clientY,moved:false,y:ev.clientY,x:ev.clientX,raf:0};
+  const step=()=>{ const d=_tsDrag; if(!d||!d.moved) return;
+    const edge=70, H=window.innerHeight;
+    const v=d.y>H-edge-90?Math.min(14,(d.y-(H-edge-90))/4):d.y<edge+60?-Math.min(14,(edge+60-d.y)/4):0;
+    if(v){ window.scrollBy(0,v); tsDragTo(d.x,d.y); }
+    d.raf=requestAnimationFrame(step); };
+  const mv=e=>{ const d=_tsDrag; if(!d) return; d.x=e.clientX; d.y=e.clientY;
+    if(!d.moved && Math.abs(e.clientY-d.y0)>6){ d.moved=true; ui.ts.sel={date,a:s,b:s}; if(navigator.vibrate) navigator.vibrate(10); d.raf=requestAnimationFrame(step); }
+    if(d.moved) tsDragTo(e.clientX,e.clientY); };
+  const up=()=>{ el.removeEventListener("pointermove",mv); el.removeEventListener("pointerup",up); el.removeEventListener("pointercancel",up);
+    const d=_tsDrag; _tsDrag=null; if(!d) return; cancelAnimationFrame(d.raf);
+    if(!d.moved){ openTSBlock(date,s); return; }
+    const r=tsSelRange(); if(r&&r[0]===r[1]){ ui.ts.sel=null; tsSelPaint(); openTSBlock(date,r[0]); return; }
+    openTSBulk(); };
+  el.addEventListener("pointermove",mv); el.addEventListener("pointerup",up); el.addEventListener("pointercancel",up);
+}
+function tsDragTo(x,y){
+  const sel=ui.ts.sel; if(!sel) return;
+  const col=document.querySelector(".ts-row[data-slot] .ts-tags"); const cx=col?col.getBoundingClientRect().left+10:x;
+  const s=tsSlotAt(cx,y); if(s!=null && s!==sel.b){ sel.b=s; tsSelPaint(); }
+}
+function tsSelClear(){ ui.ts.sel=null; tsSelPaint(); }
+function tsSelPaint(){
+  const sel=ui.ts.sel, sh=document.getElementById("sheet");
+  if(sel&&(ui.mode!=="timesheet"||ui.ts.sub!=="sheet"||sel.date!==ui.ts.d||(!_tsDrag&&!(sh&&sh.classList.contains("show"))))) ui.ts.sel=null;
+  const r=tsSelRange();
+  document.querySelectorAll(".ts-row[data-slot]").forEach(row=>{ const s=+row.dataset.slot; row.classList.toggle("tssel",!!r&&s>=r[0]&&s<=r[1]); });
+}
+function tsSelEntries(){ const r=tsSelRange(), d=ui.ts.sel.date, out=[]; for(let s=r[0];s<=r[1];s++) out.push(tsEnsure(d,s).e); return out; }
+function openTSBulk(){
+  const r=tsSelRange(); if(!r) return;
+  const es=tsSelEntries(), n=es.length;
+  const chips=TS_CATS.map(([c,col])=>{
+    const on=es.every(e=>(e.cats||[]).includes(c));
+    return `<button class="catchip${on?' on':''}" style="${on?`background:${col};border-color:${col}`:''}" data-c="${esc(c)}" onclick="tsBulkCat(this.dataset.c,this)"><i style="background:${col}"></i>${esc(c)}</button>`;
+  }).join("");
+  const hpAll=v=>es.every(e=>(e.hp||"")===v);
+  const done="tsSelClear();closeSheet()";
+  openSheet(`
+    <div class="sheet-hd"><h2>${n} blocks · ${slotLabel(r[0])} – ${slotLabel(r[1]+1)}</h2><button class="sheet-close" onclick="${done}">${X}</button></div>
+    <div class="sheet-body">
+      <div class="field">
+        <label style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+          <span>Categories (applies to all ${n})</span>
+          <button onclick="tsBulkClear()" style="background:none;border:none;padding:0;font-size:12px;font-weight:800;color:var(--hi);cursor:pointer;text-transform:none;letter-spacing:0">Clear all</button>
+        </label>
+        <div class="catgrid">${chips}</div>
+      </div>
+      <div class="field"><label>Payoff</label>
+        <div class="hpseg">
+          <button class="${hpAll('HP')?'on-HP':''}" onclick="tsBulkHP('HP')">High payoff</button>
+          <button class="${hpAll('LP')?'on-LP':''}" onclick="tsBulkHP('LP')">Low payoff</button>
+          <button class="${hpAll('')?'sel':''}" style="flex:.55" onclick="tsBulkHP('')">—</button>
+        </div>
+      </div>
+      <button class="btn" onclick="${done}">Done</button>
+    </div>`);
+}
+function tsBulkCat(cat,btn){
+  const es=tsSelEntries(), all=es.every(e=>(e.cats||[]).includes(cat)), col=TS_COLOR[cat]||"#999";
+  es.forEach(e=>{ e.cats=e.cats||[]; const i=e.cats.indexOf(cat);
+    if(all){ if(i>=0) e.cats.splice(i,1); } else if(i<0) e.cats.push(cat);
+    delete e.autoCat; delete e.autoCats; tsSave(e); });
+  if(all){ btn.classList.remove("on"); btn.style.background=""; btn.style.borderColor=""; }
+  else { btn.classList.add("on"); btn.style.background=col; btn.style.borderColor=col; }
+}
+function tsBulkClear(){
+  tsSelEntries().forEach(e=>{ e.cats=[]; delete e.autoCat; delete e.autoCats; tsSave(e); });
+  document.querySelectorAll(".catgrid .catchip").forEach(b=>{ b.classList.remove("on"); b.style.background=""; b.style.borderColor=""; });
+}
+function tsBulkHP(v){
+  tsSelEntries().forEach(e=>{ e.hp=v||null; tsSave(e); });
+  const seg=document.querySelectorAll(".hpseg button"); seg.forEach(b=>b.classList.remove("on-HP","on-LP","sel"));
+  seg[v==="HP"?0:v==="LP"?1:2].classList.add(v==="HP"?"on-HP":v==="LP"?"on-LP":"sel");
 }
 function tsClearCats(date,slot){
   const {e}=tsEnsure(date,slot);
